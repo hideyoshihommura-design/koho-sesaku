@@ -4,75 +4,121 @@
 
 ---
 
-## 1. 全体フロー
+## 1. 全体フロー（フローA・B統合）
 
 ```mermaid
 flowchart TD
-    A[👤 担当者\n好きなタイミングで素材をまとめて追加] --> B[📁 Google Drive\n投稿素材_キュー\n001・002・003...と番号順に格納]
+    subgraph FLOW_A["フローA：新規記事作成"]
+        A1[👤 担当者\n好きなタイミングで素材を追加] --> A2[📁 Google Drive\n投稿素材_キュー]
+        A2 --> A3[☁️ Cloud Scheduler\n毎朝 9:00 起動]
+        A3 --> A4{キューに\n未処理素材がある？}
+        A4 -->|No| A5[📬 ストックなし通知]
+        A4 -->|Yes| A6[📂 先頭の素材を1つ取り出す]
+        A6 --> A7[🤖 Claude claude-sonnet-4-6\n記事＋SNS投稿文を一括生成]
+        A7 --> A8[📝 WordPress\n下書きとして自動投稿]
+        A8 --> A9[👤 担当者が確認・公開\n約5〜10分]
+    end
 
-    B --> C[☁️ Cloud Scheduler\n毎朝 9:00 自動起動]
-    C --> D{キューに\n未処理素材がある？}
+    subgraph FLOW_B["フローB：既存記事からSNS展開"]
+        B1[👤 担当者が\nWordPressで記事を公開] --> B2[🔔 WP Webhooks\n即時通知]
+        B2 --> B3[🚀 Cloud Run]
+        B3 --> B4[📰 WordPress REST API\n記事内容を自動取得\nタイトル・本文・画像]
+        B4 --> B5[🤖 Claude claude-sonnet-4-6\n各SNS用投稿文を最適化・生成]
+    end
 
-    D -->|No| E[📬 担当者へ警告通知\nストックがなくなりました]
-    D -->|Yes| F[📂 先頭の素材を1つ取り出す]
+    A9 -->|公開がトリガー| B2
 
-    F --> G[☁️ Cloud Pub/Sub\nイベントキュー]
-    G --> H[🚀 Cloud Run\nオーケストレーター]
-    H --> I[🔑 Secret Manager\nAPIキー取得]
-    I --> H
+    B5 --> C1[🎬 Vertex AI Veo 2\nTikTok用動画を自動生成]
+    B5 --> C2[📊 HubSpot]
+    C2 --> C3[📘 Facebook\n自動投稿]
+    C2 --> C4[📷 Instagram\n自動投稿]
+    C1 --> C5[🎵 TikTok\n動画＋キャプション\n自動投稿]
+    B5 --> C6[🏥 LIFULL介護\nAPI または Playwright\n自動投稿]
 
-    H --> J{画像・PDFあり？}
-    J -->|Yes| K[🤖 Vertex AI Vision\n画像・PDFを解析]
-    J -->|No| L[テキストをそのまま使用]
-
-    K --> M[🤖 Vertex AI\nClaude claude-sonnet-4-6\n記事・全SNS投稿文を一括生成]
-    L --> M
-
-    M --> N[🎬 Vertex AI Veo 2\n画像＋テキストから\nTikTok用動画を自動生成]
-
-    M --> O[📝 WordPress REST API\n下書きとして投稿]
-    N --> P[🎵 TikTok Content Posting API\n動画＋キャプションを自動投稿]
-    M --> Q[🏥 LIFULL介護\nAPI または Playwright\n記事を自動投稿]
-
-    O --> R[👤 担当者が確認・公開\n約5〜10分]
-    R --> S[🔔 WP Webhooks]
-    S --> T[📊 HubSpot]
-    T --> U[📘 Facebook\n自動投稿]
-    T --> V[📷 Instagram\n自動投稿]
-
-    H --> W[📂 処理済みフォルダへ自動移動]
-    W --> X[📬 担当者へ完了通知\n残りストック数を表示]
-
-    H --> LOG[📋 Cloud Logging]
-    H --> MON[🔔 Cloud Monitoring]
+    B3 --> LOG[📋 Cloud Logging]
+    B3 --> MON[🔔 Cloud Monitoring]
 ```
 
 ---
 
-## 2. TikTok 完全自動化フロー
+## 2. フローA 詳細（新規記事作成）
 
 ```mermaid
 flowchart TD
-    A[素材\n画像・テキスト] --> B[Vertex AI Veo 2\n動画自動生成]
+    A[担当者が素材を投入\nメモ・画像・PDF・URL] --> B[Google Drive\n投稿素材_キュー\n001・002・003...]
+
+    B --> C[毎朝 9:00\nCloud Scheduler 起動]
+    C --> D{未処理フォルダ\nある？}
+    D -->|No| E[📬 担当者へ警告\nストックがなくなりました]
+    D -->|Yes| F[先頭フォルダを取得]
+
+    F --> G{画像・PDFあり？}
+    G -->|Yes| H[Vertex AI Vision\n画像・PDFを解析]
+    G -->|No| I[テキストをそのまま使用]
+
+    H --> J[Claude claude-sonnet-4-6\n記事＋全SNS投稿文を一括生成]
+    I --> J
+
+    J --> K[WordPress REST API\n下書きとして投稿]
+    K --> L[フォルダを処理済みへ移動]
+    L --> M[📬 担当者へ確認メール\n残りストック数を表示]
+    M --> N[担当者が確認・公開]
+    N -->|公開| O[フローBへ引き継ぎ\nSNS自動投稿開始]
+```
+
+---
+
+## 3. フローB 詳細（既存記事からSNS展開）
+
+```mermaid
+flowchart TD
+    A[WordPressで記事を公開\nフローAの下書きでも\n直接書いた記事でもOK] --> B[WP Webhooks\n即時通知]
+
+    B --> C[Cloud Pub/Sub\nイベントキュー]
+    C --> D[Cloud Run\nオーケストレーター]
+
+    D --> E[WordPress REST API\n記事内容を取得]
+    E --> F[タイトル・本文\nアイキャッチ画像・URL]
+
+    F --> G[Claude claude-sonnet-4-6\n各SNS用投稿文を最適化]
+
+    G --> H[生成コンテンツ]
+    H --> H1[Facebook投稿文\n300文字以内]
+    H --> H2[Instagram投稿文\n150文字＋ハッシュタグ]
+    H --> H3[TikTokキャプション\n100文字＋ハッシュタグ]
+    H --> H4[LIFULL介護投稿文\n200文字以内]
+
+    H1 --> I[HubSpot\nFacebook自動投稿]
+    H2 --> J[HubSpot\nInstagram自動投稿]
+    H3 --> K[Veo 2\n動画自動生成]
+    K --> L[TikTok\n動画＋キャプション自動投稿]
+    H4 --> M[LIFULL介護\nAPI または Playwright\n自動投稿]
+
+    I & J & L & M --> N[✅ 全プラットフォーム投稿完了]
+    N --> O[Cloud Logging\n投稿結果を記録]
+```
+
+---
+
+## 4. TikTok 完全自動化フロー
+
+```mermaid
+flowchart TD
+    A[記事のアイキャッチ画像\n＋本文テキスト] --> B[Vertex AI Veo 2\n動画自動生成]
 
     B --> C[動画の内容]
-    C --> C1[提供画像のスライドショー]
-    C --> C2[Claudeのテキストをテロップ挿入]
+    C --> C1[アイキャッチ画像\nスライドショー]
+    C --> C2[Claudeのテキストを\nテロップ挿入]
     C --> C3[15〜60秒に自動調整]
 
     C1 & C2 & C3 --> D[Cloud Storage\n動画を一時保存]
-
     D --> E[TikTok Content Posting API]
-    E --> F[キャプション\nClaudeが生成]
-    E --> G[ハッシュタグ\nClaudeが生成]
-
-    F & G --> H[✅ TikTok 自動投稿完了]
-    H --> I[Cloud Logging\n投稿URLを記録]
+    E --> F[✅ TikTok 自動投稿完了]
 ```
 
 ---
 
-## 3. LIFULL介護 完全自動化フロー
+## 5. LIFULL介護 完全自動化フロー
 
 ```mermaid
 flowchart TD
@@ -81,21 +127,20 @@ flowchart TD
     B -->|Yes 方針A| C[REST API\n直接投稿]
     B -->|No 方針B| D[Playwright\nブラウザ自動操作]
 
-    C --> G[✅ LIFULL介護\n自動投稿完了]
-
     D --> E[パートナー管理画面に\n自動ログイン]
     E --> F[記事入力フォームに\n自動入力・投稿]
+
+    C --> G[✅ LIFULL介護 自動投稿完了]
     F --> G
 
-    G --> H[Cloud Logging\n投稿結果を記録]
-    H --> I{投稿成功？}
-    I -->|No| J[Cloud Monitoring\nエラーアラート通知]
-    I -->|Yes| K[完了]
+    G --> H{投稿成功？}
+    H -->|No| I[Cloud Monitoring\nエラーアラート]
+    H -->|Yes| J[Cloud Logging\n記録]
 ```
 
 ---
 
-## 4. GCP インフラ構成
+## 6. GCP インフラ構成
 
 ```mermaid
 graph TB
@@ -112,8 +157,12 @@ graph TB
         AR[Artifact Registry]
     end
 
-    subgraph INPUT["📥 入力"]
+    subgraph FLOW_A_IN["📥 フローA入力"]
         GD[Google Drive\n投稿素材_キュー]
+    end
+
+    subgraph FLOW_B_IN["📥 フローB入力"]
+        WPW[WP Webhooks\n記事公開を通知]
     end
 
     subgraph OUTPUT["📤 出力先（全自動）"]
@@ -125,7 +174,9 @@ graph TB
         LF[LIFULL介護]
     end
 
-    GD --> CS --> PS --> CR
+    GD --> CS --> PS
+    WPW --> PS
+    PS --> CR
     CR --> CL_AI
     CR --> VEO --> GCS --> TK
     CR --> SM
@@ -139,7 +190,7 @@ graph TB
 
 ---
 
-## 5. キュー管理フロー
+## 7. キュー管理フロー（フローA）
 
 ```mermaid
 flowchart LR
@@ -160,7 +211,7 @@ flowchart LR
 
 ---
 
-## 6. 実装フェーズ（ガントチャート）
+## 8. 実装フェーズ（ガントチャート）
 
 ```mermaid
 gantt
@@ -170,30 +221,28 @@ gantt
         GCPプロジェクト・IAM設定          :p1a, 2026-03-10, 3d
         Secret Manager・Logging設定       :p1b, after p1a, 2d
 
-    section フェーズ2 Claude記事生成
-        Vertex AI / Claude 動作確認        :p2a, after p1b, 3d
-        プロンプトチューニング             :p2b, after p2a, 5d
+    section フェーズ2 フローB（優先）
+        WP Webhooks設定                   :p2a, after p1b, 2d
+        WordPress REST API記事取得        :p2b, after p2a, 3d
+        Claude SNS投稿文最適化            :p2c, after p2b, 4d
+        HubSpot・Facebook・Instagram      :p2d, after p2c, 3d
 
-    section フェーズ3 WordPress・HubSpot
-        WordPress REST API 実装            :p3a, after p2b, 3d
-        HubSpot・Facebook・Instagram設定   :p3b, after p3a, 4d
+    section フェーズ3 TikTok完全自動化
+        TikTok Business API 申請          :p3a, 2026-03-10, 20d
+        Veo 2 動画生成テスト              :p3b, after p2d, 4d
+        TikTok投稿API接続                 :p3c, after p3b, 3d
 
-    section フェーズ4 TikTok完全自動化
-        TikTok Business API 申請           :p4a, 2026-03-10, 20d
-        Veo 2 動画生成テスト               :p4b, after p3b, 4d
-        TikTok投稿API接続                  :p4c, after p4b, 3d
+    section フェーズ4 LIFULL介護完全自動化
+        LIFULL介護API問い合わせ           :p4a, 2026-03-10, 7d
+        API対応：REST API実装             :p4b, after p4a, 5d
+        API非対応：Playwright実装         :p4c, after p4a, 7d
 
-    section フェーズ5 LIFULL介護完全自動化
-        LIFULL介護API問い合わせ            :p5a, 2026-03-10, 7d
-        API対応：REST API実装              :p5b, after p5a, 5d
-        API非対応：Playwright実装          :p5c, after p5a, 7d
+    section フェーズ5 フローA実装
+        Claude記事生成・チューニング      :p5a, after p3c, 5d
+        Google Drive キュー処理実装       :p5b, after p5a, 3d
+        ストック通知機能実装              :p5c, after p5b, 2d
 
-    section フェーズ6 キュー基盤整備
-        Google Drive キュー処理実装        :p6a, after p4c, 3d
-        ストック通知機能実装               :p6b, after p6a, 2d
-        運用マニュアル作成                 :p6c, after p6b, 2d
-
-    section フェーズ7 テスト運用
-        全プラットフォーム動作確認         :p7a, after p6c, 7d
-        改善・KPI計測開始                  :p7b, after p7a, 7d
+    section フェーズ6 テスト運用
+        全プラットフォーム動作確認        :p6a, after p5c, 7d
+        改善・KPI計測開始                 :p6b, after p6a, 7d
 ```
