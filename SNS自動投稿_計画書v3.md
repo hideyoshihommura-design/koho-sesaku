@@ -1,5 +1,5 @@
-# SNS・LIFULL介護 自動投稿 計画書 v3.0
-## 〜 GCP + Claude AI による記事自動生成〜WordPress投稿〜SNS展開 〜
+# SNS・LIFULL介護 自動投稿 計画書 v3.1
+## 〜 GCP + Claude AI による記事自動生成〜WordPress投稿〜全SNS完全自動展開 〜
 
 作成日: 2026-03-07
 担当: Hideyoshi Hommura
@@ -9,7 +9,17 @@
 ## 1. プロジェクト概要
 
 ### 目的
-画像や根拠となる情報を提供するだけで、Claude AI が記事を自動生成し、WordPressへの投稿・Facebook・Instagram・TikTok・LIFULL介護への展開まで全工程を自動化する。インフラはすべて **Google Cloud Platform（GCP）** 上に構築し、セキュリティ・スケーラビリティ・コスト管理を一元化する。
+画像や根拠となる情報を提供するだけで、Claude AI が記事を自動生成し、WordPress・Facebook・Instagram・TikTok・LIFULL介護への投稿まで**全工程を完全自動化**する。インフラはすべて **Google Cloud Platform（GCP）** 上に構築する。
+
+### 自動化レベル（全プラットフォーム完全自動）
+
+| プラットフォーム | 自動化方式 | 自動化レベル |
+|----------------|----------|------------|
+| WordPress | REST API | 完全自動 |
+| Facebook | HubSpot Social API | 完全自動 |
+| Instagram | HubSpot Social API | 完全自動 |
+| TikTok | Veo 2（動画生成）+ TikTok Content Posting API | 完全自動 |
+| LIFULL介護 | パートナーAPI（優先）/ Playwright自動操作（代替） | 完全自動 |
 
 ---
 
@@ -17,85 +27,127 @@
 
 ```
 【入力】
-Google Drive（素材フォルダ）
+Google Drive（投稿素材_キュー）
 テキスト / 画像 / PDF / URL
-        ↓
-        ↓ Drive API通知
-        ↓
+        ↓ キュー方式：1日1件ずつ自動処理
 【GCP インフラ】
-┌──────────────────────────────────────────┐
-│                                          │
-│  Cloud Pub/Sub（イベントキュー）          │
-│        ↓                                 │
-│  Cloud Run（オーケストレーター）          │
-│  ├─ Vertex AI（Claude claude-sonnet-4-6）│  ← 記事・SNS投稿文の生成
-│  ├─ WordPress REST API                   │  ← 下書き投稿
-│  ├─ HubSpot API                          │  ← Facebook・Instagram投稿
-│  └─ TikTok Business API                  │  ← キャプション送信
-│                                          │
-│  Secret Manager（APIキー管理）            │
-│  Cloud Scheduler（毎日定期チェック）      │
-│  Cloud Logging（全ログ記録）             │
-│  Cloud Monitoring（エラーアラート）       │
-│                                          │
-└──────────────────────────────────────────┘
+┌────────────────────────────────────────────────┐
+│                                                │
+│  Cloud Scheduler（毎朝 9:00）                  │
+│        ↓                                       │
+│  Cloud Pub/Sub（イベントキュー）                │
+│        ↓                                       │
+│  Cloud Run（オーケストレーター）                │
+│  ├─ Vertex AI Claude claude-sonnet-4-6         │ ← 記事・投稿文生成
+│  ├─ Vertex AI Veo 2                            │ ← TikTok用動画自動生成
+│  ├─ WordPress REST API                         │ ← 下書き投稿
+│  ├─ HubSpot API                                │ ← Facebook・Instagram
+│  ├─ TikTok Content Posting API                 │ ← 動画自動投稿
+│  └─ LIFULL介護 API / Playwright                │ ← 記事自動投稿
+│                                                │
+│  Secret Manager / Cloud Logging / Monitoring   │
+│                                                │
+└────────────────────────────────────────────────┘
         ↓
-【出力】
-WordPress（下書き） → 担当者確認 → 公開
-        ↓
-Facebook / Instagram（自動投稿）
-TikTok / LIFULL介護（担当者通知 → 半自動）
+【出力】全プラットフォームへ完全自動投稿
+WordPress / Facebook / Instagram / TikTok / LIFULL介護
 ```
 
 ---
 
 ## 3. GCP サービス構成詳細
 
-### 使用するGCPサービス一覧
-
 | GCPサービス | 役割 | 備考 |
 |------------|------|------|
-| **Cloud Run** | 自動化処理の中心となるサーバーレスアプリ | Node.js 18+ |
-| **Vertex AI** | Claude claude-sonnet-4-6 の呼び出し | GCP内でAnthropicモデルを利用 |
-| **Cloud Pub/Sub** | Google Driveの更新イベントを受信・キューイング | 処理の取りこぼしを防止 |
-| **Cloud Scheduler** | 毎日定期的にGoogle Driveをチェック | cron形式で設定 |
-| **Secret Manager** | 全APIキーを安全に管理 | WordPress・HubSpot・TikTokのトークン等 |
-| **Cloud Storage** | 処理済み素材・生成記事のバックアップ | Google Driveと連携 |
-| **Cloud Logging** | 全処理のログを記録 | 投稿履歴・エラーログ |
-| **Cloud Monitoring** | エラー発生時にアラート通知 | メール・Slack通知 |
-| **Artifact Registry** | Cloud RunのDockerイメージを管理 | |
+| **Cloud Run** | 自動化処理の中心 | Node.js 18+ |
+| **Vertex AI（Claude claude-sonnet-4-6）** | 記事・SNS投稿文の生成 | GCP内でAnthropicモデルを利用 |
+| **Vertex AI（Veo 2）** | TikTok用動画の自動生成 | 画像＋テキストから動画を生成 |
+| **Cloud Pub/Sub** | イベントキューイング | 処理の取りこぼしを防止 |
+| **Cloud Scheduler** | 毎朝9:00に定期実行 | cron形式で設定 |
+| **Secret Manager** | 全APIキーを安全に管理 | |
+| **Cloud Storage** | 生成動画・素材のバックアップ | |
+| **Cloud Logging** | 全処理のログを記録 | |
+| **Cloud Monitoring** | エラー発生時にアラート通知 | |
+| **Artifact Registry** | DockerイメージをGCP内で管理 | |
 
-### Vertex AI 上の Claude について
+---
 
-2026年現在、AnthropicのClaudeモデルは **Google Cloud Vertex AI** 上で利用可能。
-GCP内で完結するため、請求がGCPにまとまり、IAMによるアクセス制御も適用される。
+## 4. TikTok 完全自動化の仕組み
+
+### 課題と解決策
+TikTokはテキスト・画像投稿に対応しておらず**動画が必須**。
+→ **Vertex AI の Veo 2** で動画を自動生成することで完全自動化を実現。
+
+### 処理フロー
+```
+提供素材（画像・テキスト）
+        ↓
+Vertex AI Veo 2
+画像＋テキストから15〜30秒の動画を自動生成
+（テロップ・BGM・トランジション付き）
+        ↓
+Cloud Storage に一時保存
+        ↓
+TikTok Content Posting API
+動画＋Claudeが生成したキャプション・ハッシュタグを投稿
+```
+
+### 生成動画の内容
+- 提供画像をスライドショー形式で動画化
+- Claude が生成したテキストをテロップとして自動挿入
+- 動画の長さ：15〜60秒（素材量に応じて自動調整）
+
+---
+
+## 5. LIFULL介護 完全自動化の仕組み
+
+### 方針（2段階）
+
+**方針A：パートナーAPI（優先）**
+- LIFULL介護のパートナーサポートにAPI提供の可否を問い合わせ
+- API対応の場合 → Cloud Run から直接REST APIで記事を投稿
+
+**方針B：Playwright自動操作（API非対応の場合）**
+- Cloud Run 上で Playwright（ブラウザ自動操作ツール）を動作
+- LIFULL介護のパートナー管理画面にログイン → 記事投稿を自動実行
+- ログイン情報は Secret Manager で安全に管理
 
 ```
-利用可能モデル（Vertex AI）:
-- claude-opus-4-6      ← 最高品質（コスト高）
-- claude-sonnet-4-6    ← 品質・コストのベスト選択
-- claude-haiku-4-5     ← 高速・低コスト（SNS投稿文など）
+Cloud Run
+        ↓
+Playwright（ヘッドレスブラウザ）
+        ↓
+LIFULL介護パートナー管理画面にログイン
+        ↓
+新規記事入力フォームにClaudeの生成文を自動入力
+        ↓
+投稿ボタンを自動クリック
+        ↓
+完了確認 → Cloud Logging に記録
 ```
 
 ---
 
-## 4. Cloud Run アプリケーション設計
+## 6. Cloud Run アプリケーション設計
 
 ### アプリ構成（Node.js）
 
 ```
 cloud-run-app/
 ├── src/
-│   ├── index.ts            # エントリーポイント・ルーティング
+│   ├── index.ts              # エントリーポイント・ルーティング
 │   ├── handlers/
-│   │   ├── driveHandler.ts  # Google Drive ファイル取得
-│   │   ├── claudeHandler.ts # Vertex AI / Claude API 呼び出し
-│   │   ├── wpHandler.ts     # WordPress REST API 投稿
-│   │   └── snsHandler.ts    # HubSpot・TikTok・LIFULL投稿
+│   │   ├── queueHandler.ts   # Google Drive キュー管理
+│   │   ├── claudeHandler.ts  # Vertex AI / Claude 呼び出し
+│   │   ├── veoHandler.ts     # Vertex AI / Veo 2 動画生成
+│   │   ├── wpHandler.ts      # WordPress REST API 投稿
+│   │   ├── hubspotHandler.ts # HubSpot（Facebook・Instagram）
+│   │   ├── tiktokHandler.ts  # TikTok Content Posting API
+│   │   └── lifullHandler.ts  # LIFULL介護 API / Playwright
 │   ├── prompts/
-│   │   └── articlePrompt.ts # 記事生成プロンプト
+│   │   └── articlePrompt.ts  # 記事・SNS投稿文の生成プロンプト
 │   └── utils/
-│       └── secretManager.ts # Secret Manager からキー取得
+│       └── secretManager.ts  # Secret Manager からキー取得
 ├── Dockerfile
 └── package.json
 ```
@@ -103,38 +155,44 @@ cloud-run-app/
 ### 処理フロー（Cloud Run 内部）
 
 ```typescript
-// 大まかな処理の流れ
-async function processContent(driveFileId: string) {
+async function processQueue() {
 
-  // 1. Google Driveからソース素材を取得
-  const sources = await driveHandler.getFiles(driveFileId);
+  // 1. キューの先頭素材を取得
+  const source = await queueHandler.getNext();
+  if (!source) { await notify('ストックがなくなりました'); return; }
 
-  // 2. 画像があればVertex AI（Vision）で解析
-  const imageDescriptions = await claudeHandler.analyzeImages(sources.images);
+  // 2. 画像・PDFを解析
+  const imageDesc = await claudeHandler.analyzeImages(source.images);
 
-  // 3. Claude claude-sonnet-4-6 で記事・SNS投稿文を一括生成
-  const generated = await claudeHandler.generateArticle({
-    text: sources.text,
-    imageDescriptions,
-    urls: sources.urls,
+  // 3. 記事・全SNS投稿文を一括生成
+  const generated = await claudeHandler.generateAll({
+    text: source.text, imageDesc, urls: source.urls
   });
-  // generated には以下が含まれる:
-  // - title, content, metaDescription
-  // - facebookPost, instagramPost, tiktokCaption, lifullPost
 
-  // 4. WordPressに下書きとして投稿
-  const wpPost = await wpHandler.createDraft(generated);
+  // 4. TikTok用動画を自動生成（Veo 2）
+  const video = await veoHandler.generateVideo({
+    images: source.images,
+    caption: generated.tiktokCaption
+  });
 
-  // 5. 担当者に確認通知
-  await notify(`下書きを作成しました: ${wpPost.editUrl}`);
+  // 5. 全プラットフォームへ並列投稿
+  await Promise.all([
+    wpHandler.createDraft(generated),           // WordPress下書き
+    tiktokHandler.post(video, generated),       // TikTok
+    lifullHandler.post(generated.lifullPost),   // LIFULL介護
+  ]);
+
+  // 6. WordPress公開後にHubSpotがFacebook・Instagramへ自動投稿
+
+  // 7. 処理済みへ移動・残数通知
+  await queueHandler.markDone(source);
+  await notify(`投稿完了。残りストック: ${await queueHandler.count()}件`);
 }
 ```
 
 ---
 
-## 5. Vertex AI（Claude）プロンプト設計
-
-### 記事生成プロンプト
+## 7. Vertex AI（Claude）プロンプト設計
 
 ```
 あなたは介護業界の専門ライターです。
@@ -158,88 +216,68 @@ ${imageDescriptions}
   "altText": "アイキャッチ画像のALTテキスト",
   "facebookPost": "Facebook投稿文（300文字以内）",
   "instagramPost": "Instagram投稿文＋ハッシュタグ（150文字以内）",
-  "tiktokCaption": "TikTokキャプション（100文字以内）",
+  "tiktokCaption": "TikTokキャプション＋ハッシュタグ（100文字以内）",
   "lifullPost": "LIFULL介護向け投稿文（200文字以内）"
 }
 ```
 
 ---
 
-## 6. Secret Manager 管理するAPIキー一覧
+## 8. Secret Manager 管理するAPIキー一覧
 
 | シークレット名 | 内容 |
 |--------------|------|
 | `wordpress-app-password` | WordPress アプリケーションパスワード |
 | `hubspot-access-token` | HubSpot プライベートアプリトークン |
-| `tiktok-access-token` | TikTok Business API トークン |
+| `tiktok-access-token` | TikTok Content Posting API トークン |
+| `lifull-login-email` | LIFULL介護パートナーログインID |
+| `lifull-login-password` | LIFULL介護パートナーログインパスワード |
 | `google-drive-service-account` | Google Drive 読み取り用サービスアカウントキー |
 
-※ Vertex AI（Claude）はGCPのサービスアカウントで認証するためAPIキー不要
+※ Vertex AI（Claude・Veo 2）はGCPサービスアカウントで認証するためAPIキー不要
 
 ---
 
-## 7. Google Drive フォルダ構成（運用時）
-
-```
-広報施策/
-├── 📁 投稿素材_入力/        ← ここに素材を入れるだけでOK
-│   ├── 2026-03-07_イベント告知/
-│   │   ├── メモ.txt
-│   │   ├── 写真1.jpg
-│   │   └── 参考URL.txt
-│   └── 2026-03-14_お知らせ/
-│
-├── 📁 生成済み記事/          ← Claudeが生成した内容を自動保存
-└── 📁 公開済み/             ← WordPress公開後に自動移動
-```
-
----
-
-## 8. 実装フェーズ
+## 9. 実装フェーズ
 
 ### フェーズ1：GCP基盤構築（1週間）
-
 - [ ] GCPプロジェクトの作成・IAM設定
-- [ ] Artifact Registry・Cloud Run の有効化
-- [ ] Secret Manager にAPIキーを登録
+- [ ] 必要なAPIの有効化（Cloud Run・Vertex AI・Pub/Sub・Scheduler・Secret Manager）
+- [ ] Secret Manager に全APIキーを登録
 - [ ] Cloud Logging・Monitoring の設定
 
 ### フェーズ2：Claude 記事生成の実装（1〜2週間）
-
 - [ ] Vertex AI で Claude claude-sonnet-4-6 の動作確認
 - [ ] 記事生成プロンプトのチューニング（10本テスト）
-- [ ] 画像解析（Vision）の動作確認
-- [ ] 生成コンテンツのJSON出力を安定化
+- [ ] 画像解析・JSON出力の安定化
 
-### フェーズ3：WordPress自動投稿（1週間）
-
-- [ ] WordPress アプリケーションパスワードを Secret Manager に登録
-- [ ] Cloud Run → WordPress REST API の接続実装
-- [ ] 下書き投稿・画像アップロードのテスト
-- [ ] 担当者への確認通知（メール）の設定
-
-### フェーズ4：SNS自動投稿（1〜2週間）
-
+### フェーズ3：WordPress・HubSpot連携（1週間）
+- [ ] WordPress REST API の接続・下書き投稿テスト
 - [ ] HubSpot と Facebook・Instagram の連携設定
 - [ ] WordPress公開 → HubSpot Webhook のフロー構築
-- [ ] TikTok Business API の申請・接続
-- [ ] LIFULL介護 API連携の可否確認・対応
 
-### フェーズ5：Google Drive トリガーの整備（1週間）
+### フェーズ4：TikTok完全自動化（1〜2週間）
+- [ ] TikTok Business API の申請（審査2〜4週間のため最優先）
+- [ ] Vertex AI Veo 2 での動画生成テスト
+- [ ] Cloud Run → TikTok Content Posting API の接続
 
-- [ ] Cloud Scheduler による定期チェック設定
-- [ ] Google Drive → Cloud Pub/Sub → Cloud Run のフロー完成
+### フェーズ5：LIFULL介護完全自動化（1〜2週間）
+- [ ] LIFULL介護パートナーサポートへAPI提供の問い合わせ
+- [ ] API対応の場合：REST API接続を実装
+- [ ] API非対応の場合：Playwright自動操作を実装・テスト
+
+### フェーズ6：キュー基盤・通知の整備（1週間）
+- [ ] Google Drive キュー処理の実装
+- [ ] ストック残数の通知機能の実装
 - [ ] 担当者向け運用マニュアル作成
 
-### フェーズ6：テスト運用・改善（2週間）
-
-- [ ] 実際の記事10本で品質確認
-- [ ] Cloud Monitoring でエラー監視の確認
+### フェーズ7：テスト運用・改善（2週間）
+- [ ] 実際の記事10本で全プラットフォームの動作確認
 - [ ] KPI計測の開始
 
 ---
 
-## 9. GCPデプロイコマンド（主要手順）
+## 10. GCPデプロイコマンド（主要手順）
 
 ```bash
 # 1. GCPプロジェクト設定
@@ -256,6 +294,9 @@ gcloud services enable run.googleapis.com \
 # 3. Secret Managerにシークレットを登録
 gcloud secrets create wordpress-app-password --data-file=-
 gcloud secrets create hubspot-access-token --data-file=-
+gcloud secrets create tiktok-access-token --data-file=-
+gcloud secrets create lifull-login-email --data-file=-
+gcloud secrets create lifull-login-password --data-file=-
 
 # 4. DockerイメージをビルドしてArtifact Registryにプッシュ
 gcloud builds submit --tag REGION-docker.pkg.dev/PROJECT_ID/REPO/koho-app
@@ -267,54 +308,56 @@ gcloud run deploy koho-app \
   --region asia-northeast1 \
   --set-secrets WORDPRESS_PASSWORD=wordpress-app-password:latest \
   --set-secrets HUBSPOT_TOKEN=hubspot-access-token:latest \
-  --cpu 1 \
-  --memory 512Mi \
+  --set-secrets TIKTOK_TOKEN=tiktok-access-token:latest \
+  --set-secrets LIFULL_EMAIL=lifull-login-email:latest \
+  --set-secrets LIFULL_PASSWORD=lifull-login-password:latest \
+  --cpu 2 \
+  --memory 2Gi \
   --min-instances 0 \
   --max-instances 5
 
 # 6. Cloud Schedulerで毎日9時に実行
-gcloud scheduler jobs create http check-drive-job \
+gcloud scheduler jobs create http check-queue-job \
   --schedule="0 9 * * *" \
-  --uri="https://koho-app-xxxx.run.app/check-drive" \
+  --uri="https://koho-app-xxxx.run.app/process-queue" \
   --time-zone="Asia/Tokyo"
 ```
 
 ---
 
-## 10. 費用試算（月次）
+## 11. 費用試算（月次）
 
 | サービス | 費用目安 |
 |---------|---------|
-| Cloud Run（毎日実行） | ほぼ無料（無料枠内） |
-| Vertex AI / Claude claude-sonnet-4-6（毎日1記事×30本） | 約$15〜20/月 |
-| Cloud Pub/Sub | ほぼ無料（無料枠内） |
+| Cloud Run（毎日実行・CPU2） | 約$3〜5/月 |
+| Vertex AI / Claude claude-sonnet-4-6（月30記事） | 約$15〜20/月 |
+| Vertex AI / Veo 2（月30動画・15〜30秒） | 約$15〜30/月 |
+| Cloud Pub/Sub・Scheduler・Logging | ほぼ無料 |
 | Secret Manager | 約$0.06/月 |
-| Cloud Scheduler | 無料（3ジョブまで） |
-| Cloud Logging | 無料（50GB/月まで） |
 | HubSpot Marketing Starter | $20/月〜 |
-| **合計** | **約$35〜50/月（約5,300〜7,500円）** |
+| **合計** | **約$53〜75/月（約8,000〜11,000円）** |
 
 ---
 
-## 11. リスクと対策
+## 12. リスクと対策
 
 | リスク | 対策 |
 |--------|------|
-| Claude の生成内容が不正確 | 必ず担当者確認後に「公開」（下書きフロー） |
-| Cloud Run が停止する | min-instances=0でコスト最適化、エラー時はCloud Monitoringで即通知 |
-| Secret が漏洩する | Secret Managerで管理・定期ローテーション |
-| TikTok API 制限 | 手動投稿フローへ即時切り替え |
-| LIFULL介護 API非対応 | 自動通知＋手動投稿で対応 |
+| Claude の生成内容が不正確 | 担当者が確認後に公開（下書きフロー） |
+| Veo 2 の動画品質が低い | 生成動画をCloudStorageに保存し担当者が確認・差し替えも可能 |
+| TikTok APIの審査が遅れる | 審査中はVeo 2生成動画を担当者が手動投稿（半自動で対応） |
+| LIFULL介護がAPI非対応 | Playwright自動操作で代替 |
+| Playwrightの操作がUIChange で壊れる | Cloud MonitoringでエラーをキャッチしてSlack通知 |
 
 ---
 
-## 12. 今すぐ始めるべきアクション（優先順）
+## 13. 今すぐ始めるべきアクション（優先順）
 
 | 優先 | アクション | 担当 |
 |------|----------|------|
-| 1 | GCPプロジェクトの作成・課金設定 | Hommuraさん |
-| 2 | TikTok Business APIの申請（審査2〜4週間） | Hommuraさん |
-| 3 | LIFULL介護パートナーサポートへAPI連携問い合わせ | Hommuraさん |
+| 1 | TikTok Business APIの申請（審査2〜4週間のため最優先） | Hommuraさん |
+| 2 | LIFULL介護パートナーサポートへAPI提供の問い合わせ | Hommuraさん |
+| 3 | GCPプロジェクトの作成・課金設定 | Hommuraさん |
 | 4 | HubSpotのプラン確認（Marketing Hub Starter以上か） | Hommuraさん |
 | 5 | WordPressのアプリケーションパスワード発行 | Hommuraさん |
 | 6 | Cloud Run アプリの開発開始 | Claude Code |
