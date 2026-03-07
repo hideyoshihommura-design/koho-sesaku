@@ -6,7 +6,7 @@
 flowchart TD
     A[👤 担当者\nテキスト・画像・PDF・URLを用意] --> B[📁 Google Drive\n投稿素材_入力フォルダ]
 
-    B --> C[☁️ Cloud Scheduler\n毎週月曜 9:00 定期チェック]
+    B --> C[☁️ Cloud Scheduler\n毎日 9:00 定期チェック]
     C --> D[📨 Cloud Pub/Sub\nイベントキュー]
     D --> E[🚀 Cloud Run\nオーケストレーター]
 
@@ -68,7 +68,7 @@ graph LR
         CR[Cloud Run\nオーケストレーター]
         VA[Vertex AI\nClaude claude-sonnet-4-6]
         PS[Cloud Pub/Sub\nイベントキュー]
-        CS[Cloud Scheduler\n毎週月曜 9:00]
+        CS[Cloud Scheduler\n毎日 9:00]
         SM[Secret Manager\nAPIキー管理]
         GCS[Cloud Storage\nバックアップ]
         CL[Cloud Logging]

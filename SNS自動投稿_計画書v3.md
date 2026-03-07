@@ -34,7 +34,7 @@ Google Drive（素材フォルダ）
 │  └─ TikTok Business API                  │  ← キャプション送信
 │                                          │
 │  Secret Manager（APIキー管理）            │
-│  Cloud Scheduler（毎週定期チェック）      │
+│  Cloud Scheduler（毎日定期チェック）      │
 │  Cloud Logging（全ログ記録）             │
 │  Cloud Monitoring（エラーアラート）       │
 │                                          │
@@ -58,7 +58,7 @@ TikTok / LIFULL介護（担当者通知 → 半自動）
 | **Cloud Run** | 自動化処理の中心となるサーバーレスアプリ | Node.js 18+ |
 | **Vertex AI** | Claude claude-sonnet-4-6 の呼び出し | GCP内でAnthropicモデルを利用 |
 | **Cloud Pub/Sub** | Google Driveの更新イベントを受信・キューイング | 処理の取りこぼしを防止 |
-| **Cloud Scheduler** | 毎週定期的にGoogle Driveをチェック | cron形式で設定 |
+| **Cloud Scheduler** | 毎日定期的にGoogle Driveをチェック | cron形式で設定 |
 | **Secret Manager** | 全APIキーを安全に管理 | WordPress・HubSpot・TikTokのトークン等 |
 | **Cloud Storage** | 処理済み素材・生成記事のバックアップ | Google Driveと連携 |
 | **Cloud Logging** | 全処理のログを記録 | 投稿履歴・エラーログ |
@@ -272,9 +272,9 @@ gcloud run deploy koho-app \
   --min-instances 0 \
   --max-instances 5
 
-# 6. Cloud Schedulerで毎週月曜9時に実行
+# 6. Cloud Schedulerで毎日9時に実行
 gcloud scheduler jobs create http check-drive-job \
-  --schedule="0 9 * * 1" \
+  --schedule="0 9 * * *" \
   --uri="https://koho-app-xxxx.run.app/check-drive" \
   --time-zone="Asia/Tokyo"
 ```
@@ -285,14 +285,14 @@ gcloud scheduler jobs create http check-drive-job \
 
 | サービス | 費用目安 |
 |---------|---------|
-| Cloud Run（週1回実行） | ほぼ無料（無料枠内） |
-| Vertex AI / Claude claude-sonnet-4-6（週4記事） | 約$2〜5/月 |
+| Cloud Run（毎日実行） | ほぼ無料（無料枠内） |
+| Vertex AI / Claude claude-sonnet-4-6（毎日1記事×30本） | 約$15〜20/月 |
 | Cloud Pub/Sub | ほぼ無料（無料枠内） |
 | Secret Manager | 約$0.06/月 |
 | Cloud Scheduler | 無料（3ジョブまで） |
 | Cloud Logging | 無料（50GB/月まで） |
 | HubSpot Marketing Starter | $20/月〜 |
-| **合計** | **約$22〜26/月（約3,300〜4,000円）** |
+| **合計** | **約$35〜50/月（約5,300〜7,500円）** |
 
 ---
 
