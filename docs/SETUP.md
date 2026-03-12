@@ -25,6 +25,12 @@ gcloud config set project YOUR_PROJECT_ID
 
 ## ステップ2: Secret Manager にAPIキーを登録
 
+> **Webhook認証トークンの生成方法（Mac/Linux）：**
+> ```bash
+> openssl rand -hex 32
+> # 出力例: a3f9c2b1e4d78f0123456789abcdef01...（これをコピーしておく）
+> ```
+
 ```bash
 # WordPress アプリケーションパスワード
 # WordPress管理画面 → ユーザー → プロフィール → アプリケーションパスワード で発行
@@ -45,6 +51,14 @@ echo -n "you@example.com" | \
   gcloud secrets create lifull-login-email --data-file=-
 echo -n "your-password" | \
   gcloud secrets create lifull-login-password --data-file=-
+
+# Webhook認証トークン（openssl rand -hex 32 で生成した値）
+echo -n "your-webhook-secret" | \
+  gcloud secrets create webhook-secret --data-file=-
+
+# SendGrid APIキー（任意・メール通知を使う場合）
+echo -n "SG.xxxx" | \
+  gcloud secrets create sendgrid-api-key --data-file=-
 
 # Google Drive サービスアカウントキー（JSON）
 gcloud secrets create google-drive-service-account \
@@ -95,6 +109,16 @@ gcloud run services update sns-auto-post \
 
 ---
 
+## ステップ4.5: terraform.tfvars に通知設定を追加（任意）
+
+```hcl
+# Slack通知を使う場合
+slack_webhook_url = "https://hooks.slack.com/services/xxx/yyy/zzz"
+
+# メール通知を使う場合
+notify_email = "yoriko.kikunaga@aozora-cg.com"
+```
+
 ## ステップ5: WordPress に WP Webhooks プラグインを設定
 
 1. WordPress管理画面 → プラグイン → 新規追加 → 「WP Webhooks」を検索・インストール
@@ -104,6 +128,9 @@ gcloud run services update sns-auto-post \
    - **Action**: `post_published`（記事公開時）
    - **HTTP Method**: POST
    - **Content Type**: application/json
+4. **認証ヘッダーを設定**（セキュリティ）：
+   - Header Name: `X-Webhook-Secret`
+   - Header Value: Secret Managerに登録した `webhook-secret` の値
 
 ---
 

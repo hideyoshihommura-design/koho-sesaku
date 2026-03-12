@@ -69,6 +69,8 @@ locals {
     "lifull-login-email",
     "lifull-login-password",
     "google-drive-service-account",
+    "webhook-secret",          # WP Webhooksとの認証トークン
+    "sendgrid-api-key",        # メール通知（任意）
   ]
 }
 
@@ -153,6 +155,36 @@ resource "google_cloud_run_v2_service" "app" {
       env {
         name  = "GCS_BUCKET"
         value = google_storage_bucket.videos.name
+      }
+      env {
+        name  = "LIFULL_API_BASE_URL"
+        value = var.lifull_api_base_url
+      }
+      # Webhook認証トークン（Secret Managerから取得）
+      env {
+        name = "WEBHOOK_SECRET"
+        value_source {
+          secret_key_ref {
+            secret  = "webhook-secret"
+            version = "latest"
+          }
+        }
+      }
+      # Slack通知（任意）
+      dynamic "env" {
+        for_each = var.slack_webhook_url != "" ? [1] : []
+        content {
+          name  = "SLACK_WEBHOOK_URL"
+          value = var.slack_webhook_url
+        }
+      }
+      # メール通知先（任意）
+      dynamic "env" {
+        for_each = var.notify_email != "" ? [1] : []
+        content {
+          name  = "NOTIFY_EMAIL_TO"
+          value = var.notify_email
+        }
       }
     }
 

@@ -40,3 +40,15 @@ variable "image_url" {
   type        = string
   # 例: asia-northeast1-docker.pkg.dev/PROJECT_ID/sns-auto-post/app:latest
 }
+
+variable "slack_webhook_url" {
+  description = "Slack Incoming Webhook URL（通知用・任意）"
+  type        = string
+  default     = ""
+}
+
+variable "notify_email" {
+  description = "エラー・完了通知の送信先メールアドレス（任意）"
+  type        = string
+  default     = ""
+}

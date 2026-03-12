@@ -11,7 +11,7 @@ export async function postFacebook(message: string, articleUrl: string): Promise
   const token = await getSecret(SECRET_NAMES.HUBSPOT_ACCESS_TOKEN);
   const channelAccountId = process.env.HUBSPOT_FACEBOOK_CHANNEL_ID!;
 
-  await axios.post(
+  const response = await axios.post(
     `${HUBSPOT_API_BASE}/broadcast/v1/broadcasts`,
     {
       channelGuid: channelAccountId,
@@ -28,7 +28,10 @@ export async function postFacebook(message: string, articleUrl: string): Promise
     }
   );
 
-  logger.info('HubSpot: Facebook投稿完了', { platform: 'Facebook' });
+  logger.info('HubSpot: Facebook投稿完了', {
+    platform: 'Facebook',
+    broadcastId: response.data.broadcastGuid,
+  });
 }
 
 // HubSpot Social API でInstagramに投稿
@@ -38,16 +41,22 @@ export async function postInstagram(caption: string, imageUrl: string): Promise<
   const token = await getSecret(SECRET_NAMES.HUBSPOT_ACCESS_TOKEN);
   const channelAccountId = process.env.HUBSPOT_INSTAGRAM_CHANNEL_ID!;
 
-  await axios.post(
+  const body: Record<string, unknown> = {
+    channelGuid: channelAccountId,
+    triggerAt: new Date().toISOString(),
+    content: { body: caption },
+  };
+
+  // Instagramは画像必須。なければスキップ
+  if (!imageUrl) {
+    logger.warn('Instagram: アイキャッチ画像がないため投稿をスキップします', { platform: 'Instagram' });
+    return;
+  }
+  body.content = { body: caption, photoUrl: imageUrl };
+
+  const response = await axios.post(
     `${HUBSPOT_API_BASE}/broadcast/v1/broadcasts`,
-    {
-      channelGuid: channelAccountId,
-      triggerAt: new Date().toISOString(),
-      content: {
-        body: caption,
-        photoUrl: imageUrl,
-      },
-    },
+    body,
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -56,5 +65,21 @@ export async function postInstagram(caption: string, imageUrl: string): Promise<
     }
   );
 
-  logger.info('HubSpot: Instagram投稿完了', { platform: 'Instagram' });
+  logger.info('HubSpot: Instagram投稿完了', {
+    platform: 'Instagram',
+    broadcastId: response.data.broadcastGuid,
+  });
+}
+
+// HubSpot に接続済みのSNSチャンネル一覧を確認する（セットアップ時に使用）
+export async function listChannels(): Promise<void> {
+  const token = await getSecret(SECRET_NAMES.HUBSPOT_ACCESS_TOKEN);
+  const response = await axios.get(
+    `${HUBSPOT_API_BASE}/broadcast/v1/channels/setting/publish/current`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  console.log('HubSpot接続済みチャンネル:');
+  for (const ch of response.data) {
+    console.log(`  ${ch.accountType}: channelGuid=${ch.channelGuid} name=${ch.name}`);
+  }
 }
