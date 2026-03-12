@@ -1,0 +1,11 @@
+# terraform.tfvars のサンプル
+# このファイルをコピーして terraform.tfvars を作成してください
+
+project_id                   = "your-gcp-project-id"
+region                       = "asia-northeast1"
+wordpress_base_url           = "https://your-wordpress-site.com"
+wordpress_username           = "your-wp-username"
+hubspot_facebook_channel_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+hubspot_instagram_channel_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+lifull_api_base_url          = ""  # APIが提供された場合のみ設定
+image_url                    = "asia-northeast1-docker.pkg.dev/your-gcp-project-id/sns-auto-post/app:latest"
