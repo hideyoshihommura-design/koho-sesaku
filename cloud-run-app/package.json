@@ -12,11 +12,11 @@
   },
   "dependencies": {
     "@anthropic-ai/vertex-sdk": "^0.14.4",
-    "@google-cloud/pubsub": "^4.9.0",
     "@google-cloud/secret-manager": "^5.6.0",
     "@google-cloud/storage": "^7.14.0",
     "axios": "^1.7.9",
     "express": "^4.21.2",
+    "google-auth-library": "^9.15.1",
     "googleapis": "^144.0.0",
     "playwright": "^1.49.1"
   },
