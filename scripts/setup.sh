@@ -52,18 +52,89 @@ gcloud services enable \
 echo "✅ 完了"
 
 # ──────────────────────────────────────────────
-# Step 3: HubSpot チャンネルIDの入力
+# Step 3: HubSpotトークン入力 → チャンネルID自動取得
 # ──────────────────────────────────────────────
 echo ""
-echo "▶ Step 3/7: HubSpotチャンネルIDを設定中..."
+echo "▶ Step 3/7: HubSpotチャンネルIDを自動取得中..."
 echo ""
-echo "HubSpot管理画面 → Marketing → Social で確認できます"
-echo "（接続済みのFacebook・InstagramのGUID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx）"
+echo "HubSpotのアクセストークンを入力してください（pat-na2-xxx...）"
+read -rs HUBSPOT_TOKEN
 echo ""
-read -rp "Facebook チャンネルID: " FB_CHANNEL_ID
-read -rp "Instagram チャンネルID: " IG_CHANNEL_ID
+
+if [ -z "$HUBSPOT_TOKEN" ]; then
+  echo "❌ トークンが入力されませんでした"
+  exit 1
+fi
+
+# HubSpot APIでチャンネル一覧を取得
+echo "HubSpotのチャンネル情報を取得中..."
+CHANNELS=$(curl -s "https://api.hubapi.com/broadcast/v1/channels/setting/publish/current" \
+  -H "Authorization: Bearer ${HUBSPOT_TOKEN}")
+
+if echo "$CHANNELS" | grep -q '"error"'; then
+  echo "❌ HubSpotのAPIエラー。トークンを確認してください"
+  echo "$CHANNELS"
+  exit 1
+fi
+
 echo ""
-echo "（XとTikTokは後で設定可能です。今は空のままEnterでスキップ）"
+echo "接続済みのチャンネル一覧:"
+echo "──────────────────────────────────────"
+echo "$CHANNELS" | python3 -c "
+import json,sys
+data=json.load(sys.stdin)
+for i,ch in enumerate(data):
+    print(f'  [{i}] {ch.get(\"type\",\"\")} : {ch.get(\"channelGuid\",\"\")} ({ch.get(\"name\",\"\")})')
+"
+echo "──────────────────────────────────────"
+echo ""
+
+# Facebookの自動検出
+FB_CHANNEL_ID=$(echo "$CHANNELS" | python3 -c "
+import json,sys
+data=json.load(sys.stdin)
+for ch in data:
+    if 'FACEBOOK' in ch.get('type','').upper():
+        print(ch.get('channelGuid',''))
+        break
+" 2>/dev/null || echo "")
+
+# Instagramの自動検出
+IG_CHANNEL_ID=$(echo "$CHANNELS" | python3 -c "
+import json,sys
+data=json.load(sys.stdin)
+for ch in data:
+    if 'INSTAGRAM' in ch.get('type','').upper():
+        print(ch.get('channelGuid',''))
+        break
+" 2>/dev/null || echo "")
+
+if [ -n "$FB_CHANNEL_ID" ]; then
+  echo "✅ Facebook チャンネルID: $FB_CHANNEL_ID"
+else
+  echo "⚠ Facebookが見つかりませんでした。番号を入力してください（上のリストから）:"
+  read -rp "番号: " FB_IDX
+  FB_CHANNEL_ID=$(echo "$CHANNELS" | python3 -c "
+import json,sys
+data=json.load(sys.stdin)
+print(data[${FB_IDX}].get('channelGuid',''))
+")
+fi
+
+if [ -n "$IG_CHANNEL_ID" ]; then
+  echo "✅ Instagram チャンネルID: $IG_CHANNEL_ID"
+else
+  echo "⚠ Instagramが見つかりませんでした。番号を入力してください（上のリストから）:"
+  read -rp "番号: " IG_IDX
+  IG_CHANNEL_ID=$(echo "$CHANNELS" | python3 -c "
+import json,sys
+data=json.load(sys.stdin)
+print(data[${IG_IDX}].get('channelGuid',''))
+")
+fi
+
+echo ""
+echo "（XとTikTokは後から追加できます。今はそのままEnterでスキップ）"
 read -rp "X（旧Twitter）チャンネルID（任意）: " X_CHANNEL_ID
 read -rp "TikTok チャンネルID（任意）: " TIKTOK_CHANNEL_ID
 echo "✅ 完了"
