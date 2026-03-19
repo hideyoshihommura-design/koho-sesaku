@@ -1,0 +1,4 @@
+terraform/terraform.tfvars
+cloud-run-app/.env
+cloud-run-app/node_modules/
+cloud-run-app/dist/
