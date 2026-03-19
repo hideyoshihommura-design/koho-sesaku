@@ -23,8 +23,6 @@ function validateEnv(): void {
     'WORDPRESS_USERNAME',
     'HUBSPOT_FACEBOOK_CHANNEL_ID',
     'HUBSPOT_INSTAGRAM_CHANNEL_ID',
-    'HUBSPOT_X_CHANNEL_ID',
-    'HUBSPOT_TIKTOK_CHANNEL_ID',
   ];
 
   const missing = required.filter(key => !process.env[key]);
@@ -35,6 +33,12 @@ function validateEnv(): void {
   }
 
   // 任意だが推奨の設定
+  if (!process.env.HUBSPOT_X_CHANNEL_ID) {
+    logger.warn('HUBSPOT_X_CHANNEL_ID が未設定です。X（旧Twitter）への投稿はスキップされます');
+  }
+  if (!process.env.HUBSPOT_TIKTOK_CHANNEL_ID) {
+    logger.warn('HUBSPOT_TIKTOK_CHANNEL_ID が未設定です。TikTokへの投稿はスキップされます');
+  }
   if (!process.env.SLACK_WEBHOOK_URL && !process.env.SENDGRID_API_KEY) {
     logger.warn('SLACK_WEBHOOK_URL / SENDGRID_API_KEY が未設定です。通知はログのみになります');
   }

@@ -71,38 +71,58 @@ async function processFlowB(article: ScrapedArticle): Promise<void> {
     thumbnailBuffer = await fetchImageBuffer(article.thumbnailUrl);
   }
 
-  // TikTok動画を先に生成開始（最も時間がかかる）
-  const videoPromise = veoHandler.generateVideo({
-    imageBuffer: thumbnailBuffer ?? undefined,
-    caption: snsPosts.tiktokCaption,
-  }).catch(e => {
-    logger.error('TikTok動画生成失敗', { flow: 'B', error: String(e) });
-    return null;
-  });
+  const xEnabled = !!process.env.HUBSPOT_X_CHANNEL_ID;
+  const tiktokEnabled = !!process.env.HUBSPOT_TIKTOK_CHANNEL_ID;
 
-  // Facebook・Instagram・X は HubSpot 経由で並列投稿
-  const [fbResult, igResult, xResult] = await Promise.allSettled([
-    withRetry(
-      () => hubspotHandler.postFacebook(snsPosts.facebookPost, article.url),
-      'HubSpot Facebook投稿',
-      { maxAttempts: 3, shouldRetry: isRetryableHttpError }
-    ),
-    withRetry(
-      () => hubspotHandler.postInstagram(snsPosts.instagramPost, article.thumbnailUrl || ''),
-      'HubSpot Instagram投稿',
-      { maxAttempts: 3, shouldRetry: isRetryableHttpError }
-    ),
-    withRetry(
-      () => hubspotHandler.postX(snsPosts.xPost, article.url),
-      'HubSpot X投稿',
-      { maxAttempts: 3, shouldRetry: isRetryableHttpError }
-    ),
-  ]);
+  // TikTok動画を先に生成開始（最も時間がかかる）
+  const videoPromise = tiktokEnabled
+    ? veoHandler.generateVideo({
+        imageBuffer: thumbnailBuffer ?? undefined,
+        caption: snsPosts.tiktokCaption,
+      }).catch(e => {
+        logger.error('TikTok動画生成失敗', { flow: 'B', error: String(e) });
+        return null;
+      })
+    : Promise.resolve(null);
+
+  // Facebook・Instagram（必須）+ X（任意）を並列投稿
+  const parallelPosts: Promise<PromiseSettledResult<void>>[] = [
+    Promise.allSettled([
+      withRetry(
+        () => hubspotHandler.postFacebook(snsPosts.facebookPost, article.url),
+        'HubSpot Facebook投稿',
+        { maxAttempts: 3, shouldRetry: isRetryableHttpError }
+      ),
+    ]).then(r => r[0]),
+    Promise.allSettled([
+      withRetry(
+        () => hubspotHandler.postInstagram(snsPosts.instagramPost, article.thumbnailUrl || ''),
+        'HubSpot Instagram投稿',
+        { maxAttempts: 3, shouldRetry: isRetryableHttpError }
+      ),
+    ]).then(r => r[0]),
+  ];
+
+  if (xEnabled) {
+    parallelPosts.push(
+      Promise.allSettled([
+        withRetry(
+          () => hubspotHandler.postX(snsPosts.xPost, article.url),
+          'HubSpot X投稿',
+          { maxAttempts: 3, shouldRetry: isRetryableHttpError }
+        ),
+      ]).then(r => r[0])
+    );
+  } else {
+    logger.info('X投稿スキップ（HUBSPOT_X_CHANNEL_ID未設定）', { flow: 'B' });
+  }
+
+  const [fbResult, igResult, xResult] = await Promise.all(parallelPosts);
 
   // TikTok: 動画生成完了後に HubSpot 経由で投稿
   const video = await videoPromise;
   let tiktokSuccess = false;
-  if (video) {
+  if (tiktokEnabled && video) {
     try {
       await withRetry(
         () => hubspotHandler.postTikTok(snsPosts.tiktokCaption, video.publicUrl),
@@ -113,13 +133,15 @@ async function processFlowB(article: ScrapedArticle): Promise<void> {
     } catch (e) {
       logger.error('TikTok投稿失敗', { flow: 'B', error: String(e) });
     }
+  } else if (!tiktokEnabled) {
+    logger.info('TikTok投稿スキップ（HUBSPOT_TIKTOK_CHANNEL_ID未設定）', { flow: 'B' });
   }
 
-  const results = {
-    Facebook: fbResult.status === 'fulfilled',
-    Instagram: igResult.status === 'fulfilled',
-    X: xResult.status === 'fulfilled',
-    TikTok: tiktokSuccess,
+  const results: Record<string, boolean> = {
+    Facebook: fbResult?.status === 'fulfilled',
+    Instagram: igResult?.status === 'fulfilled',
+    X: xEnabled ? xResult?.status === 'fulfilled' : false,
+    TikTok: tiktokEnabled ? tiktokSuccess : false,
   };
 
   await notifySNSPosted(article.title, results);
