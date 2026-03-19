@@ -6,7 +6,7 @@
 # ═══════════════════════════════════════════════════════════════
 set -e
 
-PROJECT_ID="aozora-sns-auto"
+PROJECT_ID="ozora-sns-auto"
 REGION="asia-northeast1"
 IMAGE_URL="${REGION}-docker.pkg.dev/${PROJECT_ID}/sns-auto-post/app:latest"
 
