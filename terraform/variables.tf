@@ -29,6 +29,16 @@ variable "hubspot_instagram_channel_id" {
   type        = string
 }
 
+variable "hubspot_x_channel_id" {
+  description = "HubSpot X（旧Twitter）チャンネルGUID"
+  type        = string
+}
+
+variable "hubspot_tiktok_channel_id" {
+  description = "HubSpot TikTok チャンネルGUID"
+  type        = string
+}
+
 variable "image_url" {
   description = "Artifact Registry のDockerイメージURL"
   type        = string

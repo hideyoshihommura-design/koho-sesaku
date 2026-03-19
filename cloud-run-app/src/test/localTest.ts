@@ -200,17 +200,19 @@ section('リトライユーティリティテスト');
   const samplePosts = {
     facebookPost: 'FB投稿文'.repeat(20),   // 80文字（300字以内）
     instagramPost: 'IG投稿'.repeat(10),    // 40文字（150字以内）
+    xPost: 'X投稿'.repeat(15),             // 60文字（140字以内）
     tiktokCaption: 'TK'.repeat(20),        // 40文字（100字以内）
   };
 
   try {
     const fb = samplePosts.facebookPost.length <= 300;
     const ig = samplePosts.instagramPost.length <= 150;
+    const x  = samplePosts.xPost.length <= 140;
     const tk = samplePosts.tiktokCaption.length <= 100;
-    if (fb && ig && tk)
-      ok('SNS各プラットフォームの文字数制約が正しく定義されている');
+    if (fb && ig && x && tk)
+      ok('SNS各プラットフォームの文字数制約が正しく定義されている（FB/IG/X/TikTok）');
     else
-      fail('SNS各プラットフォームの文字数制約', `FB:${fb} IG:${ig} TK:${tk}`);
+      fail('SNS各プラットフォームの文字数制約', `FB:${fb} IG:${ig} X:${x} TK:${tk}`);
   } catch (e) { fail('SNS文字数制約テスト', e); }
 
   // ─────────────────────────────────

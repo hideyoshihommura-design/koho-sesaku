@@ -10,6 +10,7 @@ export interface SNSPromptInput {
 export interface GeneratedSNSPosts {
   facebookPost: string;
   instagramPost: string;
+  xPost: string;
   tiktokCaption: string;
 }
 
@@ -29,12 +30,14 @@ ${input.url}
 【各SNS投稿文のルール】
 - Facebook: 親しみやすい文体、記事の要点を伝える、最後にURL付き、300文字以内
 - Instagram: 共感を呼ぶ文体、絵文字を使って読みやすく、ハッシュタグ10個以上、本文150文字以内
+- X（旧Twitter）: 簡潔でシャープな文体、URL付き、ハッシュタグ3個以内、URL込みで140文字以内
 - TikTok: 短く引きつける一言、若い世代にも伝わる表現、ハッシュタグ5個、100文字以内
 
 【出力形式（JSON のみ返すこと）】
 {
   "facebookPost": "300文字以内の投稿文（URLを末尾に含める）: ${input.url}",
   "instagramPost": "150文字以内の投稿文\\n\\n#介護 #老人ホーム #ハッシュタグ...",
+  "xPost": "URL込み140文字以内の投稿文 ${input.url} #介護 #ハッシュタグ",
   "tiktokCaption": "100文字以内のキャプション\\n\\n#介護 #ハッシュタグ..."
 }`;
 }

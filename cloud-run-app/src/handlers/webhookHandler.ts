@@ -6,7 +6,6 @@ import { getArticleUrls, getArticleContent, ScrapedArticle } from './scraperHand
 import * as claudeHandler from './claudeHandler';
 import * as veoHandler from './veoHandler';
 import * as hubspotHandler from './hubspotHandler';
-import * as tiktokHandler from './tiktokHandler';
 import axios from 'axios';
 
 // フローB: お知らせページをポーリングして新着記事をSNS投稿
@@ -81,8 +80,8 @@ async function processFlowB(article: ScrapedArticle): Promise<void> {
     return null;
   });
 
-  // Facebook・Instagram は HubSpot 経由で並列投稿
-  const [fbResult, igResult] = await Promise.allSettled([
+  // Facebook・Instagram・X は HubSpot 経由で並列投稿
+  const [fbResult, igResult, xResult] = await Promise.allSettled([
     withRetry(
       () => hubspotHandler.postFacebook(snsPosts.facebookPost, article.url),
       'HubSpot Facebook投稿',
@@ -93,16 +92,21 @@ async function processFlowB(article: ScrapedArticle): Promise<void> {
       'HubSpot Instagram投稿',
       { maxAttempts: 3, shouldRetry: isRetryableHttpError }
     ),
+    withRetry(
+      () => hubspotHandler.postX(snsPosts.xPost, article.url),
+      'HubSpot X投稿',
+      { maxAttempts: 3, shouldRetry: isRetryableHttpError }
+    ),
   ]);
 
-  // TikTok: 動画生成完了後に投稿
+  // TikTok: 動画生成完了後に HubSpot 経由で投稿
   const video = await videoPromise;
   let tiktokSuccess = false;
   if (video) {
     try {
       await withRetry(
-        () => tiktokHandler.post(video.gcsUri, snsPosts.tiktokCaption),
-        'TikTok動画投稿',
+        () => hubspotHandler.postTikTok(snsPosts.tiktokCaption, video.publicUrl),
+        'HubSpot TikTok投稿',
         { maxAttempts: 2, shouldRetry: isRetryableHttpError }
       );
       tiktokSuccess = true;
@@ -114,6 +118,7 @@ async function processFlowB(article: ScrapedArticle): Promise<void> {
   const results = {
     Facebook: fbResult.status === 'fulfilled',
     Instagram: igResult.status === 'fulfilled',
+    X: xResult.status === 'fulfilled',
     TikTok: tiktokSuccess,
   };
 

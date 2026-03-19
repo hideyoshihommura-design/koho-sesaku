@@ -23,6 +23,8 @@ function validateEnv(): void {
     'WORDPRESS_USERNAME',
     'HUBSPOT_FACEBOOK_CHANNEL_ID',
     'HUBSPOT_INSTAGRAM_CHANNEL_ID',
+    'HUBSPOT_X_CHANNEL_ID',
+    'HUBSPOT_TIKTOK_CHANNEL_ID',
   ];
 
   const missing = required.filter(key => !process.env[key]);

@@ -157,6 +157,14 @@ resource "google_cloud_run_v2_service" "app" {
         value = var.hubspot_instagram_channel_id
       }
       env {
+        name  = "HUBSPOT_X_CHANNEL_ID"
+        value = var.hubspot_x_channel_id
+      }
+      env {
+        name  = "HUBSPOT_TIKTOK_CHANNEL_ID"
+        value = var.hubspot_tiktok_channel_id
+      }
+      env {
         name  = "GCS_BUCKET"
         value = google_storage_bucket.videos.name
       }

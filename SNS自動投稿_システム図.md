@@ -23,11 +23,13 @@ flowchart TD
 
     I --> J["📘 HubSpot\nFacebook投稿"]
     I --> K["📸 HubSpot\nInstagram投稿"]
+    I --> P["𝕏 HubSpot\nX投稿"]
     I --> L["🎬 Vertex AI\nVeo 3.1\nTikTok動画生成\n縦型9:16 / 15秒"]
-    L --> M["🎵 TikTok\nContent Posting API"]
+    L --> M["🎵 HubSpot\nTikTok投稿"]
 
     J --> N["💾 seen-urls.json更新\nCloud Storage保存"]
     K --> N
+    P --> N
     M --> N
     N --> O["🔔 Slack / メール通知\n投稿結果レポート"]
 
@@ -140,7 +142,6 @@ sequenceDiagram
     participant CL as 🤖 Claude
     participant VEO as 🎬 Veo 3.1
     participant HS as 📣 HubSpot
-    participant TK as 🎵 TikTok
     participant SL as 💬 Slack
 
     担当者->>WP: 記事を公開
@@ -153,17 +154,19 @@ sequenceDiagram
     Note over CR: 新着URLを検出
     CR->>WP: 記事ページ スクレイピング
     WP-->>CR: タイトル・本文・画像
-    CR->>CL: SNS投稿文生成（3種）
-    CL-->>CR: Facebook / Instagram / TikTok テキスト
+    CR->>CL: SNS投稿文生成（4種）
+    CL-->>CR: Facebook / Instagram / X / TikTok テキスト
     par 並列投稿
         CR->>HS: Facebook 投稿
     and
         CR->>HS: Instagram 投稿
     and
+        CR->>HS: X 投稿
+    and
         CR->>VEO: TikTok動画生成
     end
-    VEO-->>CR: 動画データ
-    CR->>TK: TikTok 動画投稿
+    VEO-->>CR: 動画データ（公開URL付き）
+    CR->>HS: TikTok 動画投稿（HubSpot経由）
     CR->>GCS: seen-urls.json 更新
     CR->>SL: 完了通知（各結果）
     SL-->>担当者: 投稿結果レポート

@@ -100,6 +100,6 @@ async function waitForOperation(operationName: string, accessToken: string): Pro
 
 async function saveToGCS(videoBuffer: Buffer, fileName: string): Promise<string> {
   const file = storage.bucket(BUCKET_NAME).file(fileName);
-  await file.save(videoBuffer, { contentType: 'video/mp4' });
+  await file.save(videoBuffer, { contentType: 'video/mp4', public: true });
   return `gs://${BUCKET_NAME}/${fileName}`;
 }
