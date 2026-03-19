@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SNS自動投稿システム フロー図</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1e40af, #7c3aed);
+      padding: 24px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header p  { font-size: 0.85rem; color: #bfdbfe; margin-top: 4px; }
+
+    .tabs {
+      display: flex;
+      gap: 4px;
+      padding: 20px 32px 0;
+      border-bottom: 2px solid #1e293b;
+    }
+    .tab {
+      padding: 10px 24px;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      background: #1e293b;
+      color: #94a3b8;
+      border: 2px solid transparent;
+      border-bottom: none;
+      transition: all 0.2s;
+    }
+    .tab:hover { background: #273344; color: #e2e8f0; }
+    .tab.active {
+      background: #0f172a;
+      color: #60a5fa;
+      border-color: #1e40af;
+      border-bottom: 2px solid #0f172a;
+    }
+
+    .panels { padding: 32px; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .panel-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #60a5fa;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .flow-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+    @media (max-width: 1100px) { .flow-grid { grid-template-columns: 1fr; } }
+
+    .flow-card {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 24px;
+      border: 1px solid #334155;
+    }
+    .flow-card.full { grid-column: 1 / -1; }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #334155;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .badge-b   { background: #1d4ed8; color: #bfdbfe; }
+    .badge-a   { background: #065f46; color: #a7f3d0; }
+    .badge-new { background: #7c2d12; color: #fed7aa; }
+
+    /* フローステップ */
+    .step-list { list-style: none; }
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #273448;
+    }
+    .step:last-child { border-bottom: none; }
+    .step-num {
+      min-width: 26px; height: 26px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 700;
+      background: #1d4ed8; color: #fff;
+      flex-shrink: 0;
+    }
+    .step-num.green  { background: #065f46; }
+    .step-num.orange { background: #92400e; }
+    .step-num.purple { background: #5b21b6; }
+
+    .step-body { flex: 1; }
+    .step-label { font-size: 0.9rem; font-weight: 600; color: #e2e8f0; }
+    .step-sub   { font-size: 0.8rem; color: #64748b; margin-top: 2px; }
+
+    .step-icon {
+      font-size: 1.2rem;
+      min-width: 28px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    /* アーキテクチャ図 */
+    .arch-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 900px) { .arch-grid { grid-template-columns: 1fr 1fr; } }
+
+    .arch-box {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+    .arch-box .icon { font-size: 2rem; margin-bottom: 8px; }
+    .arch-box .name { font-size: 0.85rem; font-weight: 700; color: #e2e8f0; }
+    .arch-box .desc { font-size: 0.75rem; color: #64748b; margin-top: 4px; }
+
+    .arrow-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 8px 0;
+      color: #64748b;
+      font-size: 0.85rem;
+    }
+
+    /* Mermaid コンテナ */
+    .mermaid-wrap {
+      background: #fff;
+      border-radius: 10px;
+      padding: 24px;
+      overflow-x: auto;
+    }
+    .mermaid { display: flex; justify-content: center; }
+
+    /* スケジュールテーブル */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    th {
+      background: #1e3a5f;
+      color: #93c5fd;
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 600;
+    }
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #273448;
+      color: #cbd5e1;
+    }
+    tr:hover td { background: #1e293b; }
+
+    .status-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+    .dot-green  { background: #22c55e; }
+    .dot-blue   { background: #3b82f6; }
+    .dot-yellow { background: #eab308; }
+
+    /* 凡例 */
+    .legend {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+      padding: 14px 18px;
+      background: #0f172a;
+      border-radius: 8px;
+      font-size: 0.82rem;
+    }
+    .legend-item { display: flex; align-items: center; gap: 6px; color: #94a3b8; }
+    .legend-color {
+      width: 14px; height: 14px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>📢 SNS自動投稿システム — フロー全体図</h1>
+    <p>aozora-cg.com &nbsp;|&nbsp; GCP Cloud Run &nbsp;|&nbsp; HubSpot &nbsp;|&nbsp; Vertex AI Veo 3.1</p>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('overview')">🗺️ 全体概要</div>
+  <div class="tab" onclick="showTab('flowB')">📥 フローB（お知らせ→SNS）</div>
+  <div class="tab" onclick="showTab('flowA')">✍️ フローA（記事生成）</div>
+  <div class="tab" onclick="showTab('infra')">☁️ インフラ構成</div>
+  <div class="tab" onclick="showTab('schedule')">🕐 スケジュール</div>
+</div>
+
+<!-- ═══════════════ 全体概要 ═══════════════ -->
+<div id="panel-overview" class="panels panel active">
+  <div class="panel-title">🗺️ システム全体概要</div>
+
+  <div class="flow-grid">
+
+    <div class="flow-card">
+      <div class="card-title">
+        <span class="badge badge-b">フロー B</span>
+        お知らせ → SNS自動投稿
+      </div>
+      <ul class="step-list">
+        <li class="step">
+          <span class="step-icon">🕐</span>
+          <span class="step-num">1</span>
+          <div class="step-body">
+            <div class="step-label">Cloud Scheduler（30分ごと）</div>
+            <div class="step-sub">POST /poll/news を自動呼び出し</div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">🔍</span>
+          <span class="step-num">2</span>
+          <div class="step-body">
+            <div class="step-label">aozora-cg.com/news/ をスクレイピング</div>
+            <div class="step-sub">.post-title a セレクターで記事リンクを取得</div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">🔄</span>
+          <span class="step-num">3</span>
+          <div class="step-body">
+            <div class="step-label">新着チェック（重複防止）</div>
+            <div class="step-sub">Cloud Storage の seen-urls.json と照合</div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">📄</span>
+          <span class="step-num">4</span>
+          <div class="step-body">
+            <div class="step-label">記事ページをスクレイピング</div>
+            <div class="step-sub">h1.page-title / .entry-content / JSON-LD</div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">🤖</span>
+          <span class="step-num">5</span>
+          <div class="step-body">
+            <div class="step-label">Claude claude-sonnet-4-6 で投稿文生成</div>
+            <div class="step-sub">Facebook / Instagram / TikTok 用に最適化</div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">📱</span>
+          <span class="step-num">6</span>
+          <div class="step-body">
+            <div class="step-label">HubSpot 経由で並列投稿</div>
+            <div class="step-sub">Facebook & Instagram 同時投稿</div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">🎬</span>
+          <span class="step-num orange">7</span>
+          <div class="step-body">
+            <div class="step-label">Veo 3.1 で動画生成 → TikTok投稿</div>
+            <div class="step-sub">縦型 9:16 / 15秒 / Content Posting API</div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">🔔</span>
+          <span class="step-num green">8</span>
+          <div class="step-body">
+            <div class="step-label">Slack / メールで完了通知</div>
+            <div class="step-sub">各プラットフォームの成功・失敗を報告</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="flow-card">
+      <div class="card-title">
+        <span class="badge badge-a">フロー A</span>
+        素材 → WordPress下書き作成
+      </div>
+      <ul class="step-list">
+        <li class="step">
+          <span class="step-icon">🕘</span>
+          <span class="step-num green">1</span>
+          <div class="step-body">
+            <div class="step-label">Cloud Scheduler（毎朝9:00）</div>
+            <div class="step-sub">POST /queue/process を自動呼び出し</div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">📂</span>
+          <span class="step-num green">2</span>
+          <div class="step-body">
+            <div class="step-label">Google Drive から素材取得</div>
+            <div class="step-sub">投稿素材_キュー フォルダの先頭フォルダ</div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">🖼️</span>
+          <span class="step-num green">3</span>
+          <div class="step-body">
+            <div class="step-label">Claude claude-sonnet-4-6 で画像解析</div>
+            <div class="step-sub">添付画像の内容を日本語で説明</div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">✍️</span>
+          <span class="step-num green">4</span>
+          <div class="step-body">
+            <div class="step-label">Claude claude-sonnet-4-6 で記事生成</div>
+            <div class="step-sub">SEO記事 + 各SNS投稿文を一括生成</div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">🎬</span>
+          <span class="step-num orange">5</span>
+          <div class="step-body">
+            <div class="step-label">Veo 3.1 で TikTok動画生成開始</div>
+            <div class="step-sub">下書き作成と並列で実行</div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">📝</span>
+          <span class="step-num green">6</span>
+          <div class="step-body">
+            <div class="step-label">WordPress に下書き保存</div>
+            <div class="step-sub">SNS投稿文をカスタムフィールドにも保存</div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">🔔</span>
+          <span class="step-num green">7</span>
+          <div class="step-body">
+            <div class="step-label">担当者へ確認通知</div>
+            <div class="step-sub">公開はWordPress管理画面から手動で実施</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="flow-card full">
+      <div class="card-title">🏗️ コンポーネント関係</div>
+      <div class="arch-grid">
+        <div class="arch-box">
+          <div class="icon">⏰</div>
+          <div class="name">Cloud Scheduler</div>
+          <div class="desc">フローA: 毎朝9:00<br>フローB: 30分ごと</div>
+        </div>
+        <div class="arch-box">
+          <div class="icon">🐳</div>
+          <div class="name">Cloud Run</div>
+          <div class="desc">Node.js アプリ<br>全フローの実行基盤</div>
+        </div>
+        <div class="arch-box">
+          <div class="icon">🔍</div>
+          <div class="name">Web Scraper</div>
+          <div class="desc">aozora-cg.com/news/<br>cheerio で HTML解析</div>
+        </div>
+        <div class="arch-box">
+          <div class="icon">🤖</div>
+          <div class="name">Claude claude-sonnet-4-6</div>
+          <div class="desc">Vertex AI 経由<br>記事・SNS投稿文生成</div>
+        </div>
+        <div class="arch-box">
+          <div class="icon">🎬</div>
+          <div class="name">Vertex AI Veo 3.1</div>
+          <div class="desc">TikTok用縦型動画<br>15秒 / 9:16</div>
+        </div>
+        <div class="arch-box">
+          <div class="icon">📣</div>
+          <div class="name">HubSpot Social</div>
+          <div class="desc">Facebook<br>Instagram</div>
+        </div>
+        <div class="arch-box">
+          <div class="icon">🎵</div>
+          <div class="name">TikTok API</div>
+          <div class="desc">Content Posting API<br>動画投稿</div>
+        </div>
+        <div class="arch-box">
+          <div class="icon">🗄️</div>
+          <div class="name">Cloud Storage</div>
+          <div class="desc">投稿済みURL管理<br>TikTok動画一時保存</div>
+        </div>
+        <div class="arch-box">
+          <div class="icon">🔐</div>
+          <div class="name">Secret Manager</div>
+          <div class="desc">APIキー・トークン<br>安全に管理</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ フローB ═══════════════ -->
+<div id="panel-flowB" class="panels panel">
+  <div class="panel-title">📥 フローB — お知らせ → SNS自動投稿</div>
+
+  <div class="flow-grid">
+    <div class="flow-card full">
+      <div class="card-title">処理フロー図</div>
+      <div class="mermaid-wrap">
+        <div class="mermaid">
+flowchart TD
+    A["⏰ Cloud Scheduler\n30分ごとに起動"] -->|POST /poll/news| B["🐳 Cloud Run\n/poll/news"]
+    B --> C["🔍 scraperHandler\naozora-cg.com/news/ を取得"]
+    C --> D["📋 記事URLリスト\n.post-title a"]
+    D --> E{"🔄 stateStore\n新着チェック\nCloud Storage と照合"}
+    E -->|"新着なし"| F["✅ 処理終了\n（次回30分後）"]
+    E -->|"新着あり"| G["📄 記事ページをスクレイピング\nh1.page-title / .entry-content / JSON-LD"]
+    G --> H["🤖 Claude claude-sonnet-4-6\nSNS投稿文を3種類生成"]
+    H --> I["並列処理"]
+    I --> J["📘 HubSpot\nFacebook投稿"]
+    I --> K["📸 HubSpot\nInstagram投稿"]
+    I --> L["🎬 Veo 3.1\nTikTok動画生成"]
+    L --> M["🎵 TikTok\nContent Posting API"]
+    J --> N["💾 seen-urls.json 更新\nCloud Storage に保存"]
+    K --> N
+    M --> N
+    N --> O["🔔 Slack / メール通知\n投稿結果を報告"]
+
+    style A fill:#1d4ed8,color:#fff,stroke:none
+    style E fill:#92400e,color:#fff,stroke:none
+    style F fill:#065f46,color:#fff,stroke:none
+    style H fill:#5b21b6,color:#fff,stroke:none
+    style L fill:#92400e,color:#fff,stroke:none
+    style O fill:#065f46,color:#fff,stroke:none
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-card">
+      <div class="card-title">📄 記事スクレイピング詳細</div>
+      <ul class="step-list">
+        <li class="step">
+          <span class="step-icon">📋</span>
+          <div class="step-body">
+            <div class="step-label">一覧ページ</div>
+            <div class="step-sub">https://aozora-cg.com/news/<br>セレクター: <code>.post-title a</code></div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">🏷️</span>
+          <div class="step-body">
+            <div class="step-label">タイトル取得</div>
+            <div class="step-sub">セレクター: <code>h1.page-title</code></div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">📝</span>
+          <div class="step-body">
+            <div class="step-label">本文取得</div>
+            <div class="step-sub">セレクター: <code>.entry-content</code></div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">🖼️</span>
+          <div class="step-body">
+            <div class="step-label">アイキャッチ画像・抜粋</div>
+            <div class="step-sub">JSON-LD (<code>application/ld+json</code>) から取得<br>ない場合は本文冒頭120文字を使用</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="flow-card">
+      <div class="card-title">🤖 Claude プロンプト設計</div>
+      <ul class="step-list">
+        <li class="step">
+          <span class="step-icon">📘</span>
+          <div class="step-body">
+            <div class="step-label">Facebook</div>
+            <div class="step-sub">親しみやすい文体・URL付き・300文字以内</div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">📸</span>
+          <div class="step-body">
+            <div class="step-label">Instagram</div>
+            <div class="step-sub">共感系・絵文字・ハッシュタグ10個以上・150文字以内</div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">🎵</span>
+          <div class="step-body">
+            <div class="step-label">TikTok</div>
+            <div class="step-sub">短く引きつける一言・ハッシュタグ5個・100文字以内</div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">📤</span>
+          <div class="step-body">
+            <div class="step-label">出力形式</div>
+            <div class="step-sub">JSON形式で3種を一括出力<br>パース失敗時はエラー通知</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="flow-card">
+      <div class="card-title">🛡️ エラーハンドリング</div>
+      <ul class="step-list">
+        <li class="step">
+          <span class="step-icon">🔁</span>
+          <div class="step-body">
+            <div class="step-label">指数バックオフ リトライ</div>
+            <div class="step-sub">5xx・429 エラー時に自動リトライ<br>Facebook/Instagram: 最大3回<br>TikTok/Claude: 最大2回</div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">⚡</span>
+          <div class="step-body">
+            <div class="step-label">1件失敗しても継続</div>
+            <div class="step-sub">新着が複数ある場合、1件エラーでも<br>次の記事の処理を継続</div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">🎬</span>
+          <div class="step-body">
+            <div class="step-label">TikTok動画生成失敗</div>
+            <div class="step-sub">Veo 3.1 失敗時はTikTokのみスキップ<br>Facebook・Instagramは通常投稿</div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">💾</span>
+          <div class="step-body">
+            <div class="step-label">重複投稿防止</div>
+            <div class="step-sub">投稿済みURLをCloud Storageで永続管理<br>再起動・再デプロイ後も安全</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ フローA ═══════════════ -->
+<div id="panel-flowA" class="panels panel">
+  <div class="panel-title">✍️ フローA — 素材 → WordPress 下書き作成</div>
+
+  <div class="flow-grid">
+    <div class="flow-card full">
+      <div class="card-title">処理フロー図</div>
+      <div class="mermaid-wrap">
+        <div class="mermaid">
+flowchart TD
+    A["⏰ Cloud Scheduler\n毎朝9:00"] -->|POST /queue/process| B["🐳 Cloud Run\n/queue/process"]
+    B --> C["📂 Google Drive\n投稿素材_キュー フォルダ"]
+    C --> D{"キューは空?"}
+    D -->|空| E["🔔 空キュー通知\nSlack / メール"]
+    D -->|あり| F["📄 素材ファイル取得\nテキスト / 画像 / PDF"]
+    F --> G["🖼️ Claude\n画像内容を解析・説明"]
+    G --> H["✍️ Claude claude-sonnet-4-6\n記事 + SNS投稿文を一括生成"]
+    H --> I["処理を並列開始"]
+    I --> J["🎬 Veo 3.1\nTikTok動画生成（並列）"]
+    I --> K["📝 WordPress REST API\n下書きとして保存"]
+    K --> L["🗂️ Google Drive\n処理済みフォルダへ移動"]
+    L --> M{"残りストック\n≤ 3件?"}
+    M -->|yes| N["⚠️ ストック不足警告\nSlack / メール"]
+    M -->|no| O["✅ 完了通知\n記事タイトル・ID・残りストック数"]
+    N --> O
+    J --> P["💾 Cloud Storage\n動画を一時保存"]
+
+    style A fill:#065f46,color:#fff,stroke:none
+    style D fill:#92400e,color:#fff,stroke:none
+    style E fill:#7f1d1d,color:#fff,stroke:none
+    style H fill:#5b21b6,color:#fff,stroke:none
+    style J fill:#92400e,color:#fff,stroke:none
+    style M fill:#92400e,color:#fff,stroke:none
+    style N fill:#92400e,color:#fff,stroke:none
+    style O fill:#065f46,color:#fff,stroke:none
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-card">
+      <div class="card-title">📂 Google Drive 構成</div>
+      <ul class="step-list">
+        <li class="step">
+          <span class="step-icon">📁</span>
+          <div class="step-body">
+            <div class="step-label">投稿素材_キュー</div>
+            <div class="step-sub">001_スタッフ紹介/<br>002_イベント告知/ ...</div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">📄</span>
+          <div class="step-body">
+            <div class="step-label">各フォルダの中身</div>
+            <div class="step-sub">.txt（原稿メモ）<br>画像ファイル（.jpg/.png）<br>PDF（パンフレット等）</div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">✅</span>
+          <div class="step-body">
+            <div class="step-label">処理済み</div>
+            <div class="step-sub">処理完了後に自動移動</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="flow-card">
+      <div class="card-title">📝 WordPress に保存される内容</div>
+      <ul class="step-list">
+        <li class="step">
+          <span class="step-icon">🏷️</span>
+          <div class="step-body">
+            <div class="step-label">タイトル・本文（Markdown）</div>
+            <div class="step-sub">SEO最適化済み・H2/H3見出し付き</div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">🔍</span>
+          <div class="step-body">
+            <div class="step-label">メタディスクリプション</div>
+            <div class="step-sub">Yoast SEO カスタムフィールドに保存</div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">📱</span>
+          <div class="step-body">
+            <div class="step-label">SNS投稿文（カスタムフィールド）</div>
+            <div class="step-sub">sns_facebook_post<br>sns_instagram_post<br>sns_tiktok_caption</div>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-icon">👁️</span>
+          <div class="step-body">
+            <div class="step-label">ステータス: 下書き</div>
+            <div class="step-sub">公開は担当者が管理画面から手動実施<br>公開後 → フローB が自動検知</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ インフラ ═══════════════ -->
+<div id="panel-infra" class="panels panel">
+  <div class="panel-title">☁️ GCP インフラ構成</div>
+
+  <div class="flow-grid">
+    <div class="flow-card full">
+      <div class="card-title">インフラ全体図</div>
+      <div class="mermaid-wrap">
+        <div class="mermaid">
+flowchart LR
+    subgraph GCP["☁️ Google Cloud Platform"]
+      subgraph CR["Cloud Run"]
+        APP["🐳 sns-auto-post\nNode.js 20\n2CPU / 2GB"]
+      end
+      subgraph Storage["Cloud Storage"]
+        V["sns-videos\nTikTok動画\n（30日で自動削除）"]
+        S["sns-state\nflow-b-seen-urls.json\n投稿済みURL管理"]
+      end
+      subgraph SM["Secret Manager"]
+        SEC["hubspot-access-token\ntiktok-access-token\nwordpress-app-password\ngoogle-drive-sa\nlifull-login-*\nsendgrid-api-key"]
+      end
+      subgraph Sched["Cloud Scheduler"]
+        SA["フローA\n毎朝9:00\n/queue/process"]
+        SB["フローB\n30分ごと\n/poll/news"]
+      end
+      subgraph AI["Vertex AI"]
+        CL["Claude claude-sonnet-4-6\nus-east5"]
+        VEO["Veo 3.1\nus-central1"]
+      end
+      subgraph AR["Artifact Registry"]
+        IMG["Dockerイメージ\nsns-auto-post/app:latest"]
+      end
+      LOG["Cloud Logging\n構造化ログ"]
+      MON["Cloud Monitoring\nエラーアラート"]
+    end
+
+    subgraph EXT["外部サービス"]
+      WP["🌐 aozora-cg.com\nWordPress"]
+      HS["📣 HubSpot\nFacebook / Instagram"]
+      TK["🎵 TikTok API"]
+      GD["📂 Google Drive\n素材キュー"]
+      SL["💬 Slack\n通知"]
+    end
+
+    SA --> APP
+    SB --> APP
+    APP --> SM
+    APP --> Storage
+    APP --> AI
+    APP --> LOG
+    APP --> MON
+    APP <--> WP
+    APP --> HS
+    APP --> TK
+    APP <--> GD
+    APP --> SL
+    IMG --> CR
+
+    style GCP fill:#0f172a,stroke:#334155,color:#e2e8f0
+    style EXT fill:#1a0a2e,stroke:#334155,color:#e2e8f0
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-card">
+      <div class="card-title">🐳 Cloud Run 設定</div>
+      <table>
+        <tr><th>項目</th><th>値</th></tr>
+        <tr><td>ベースイメージ</td><td>node:20-slim</td></tr>
+        <tr><td>CPU</td><td>2 vCPU</td></tr>
+        <tr><td>メモリ</td><td>2 GB</td></tr>
+        <tr><td>タイムアウト</td><td>600秒（10分）</td></tr>
+        <tr><td>最小インスタンス</td><td>0（コスト最適化）</td></tr>
+        <tr><td>最大インスタンス</td><td>10</td></tr>
+        <tr><td>リージョン</td><td>asia-northeast1（東京）</td></tr>
+        <tr><td>認証</td><td>Scheduler SA のみ許可</td></tr>
+      </table>
+    </div>
+
+    <div class="flow-card">
+      <div class="card-title">🔐 Secret Manager 管理キー</div>
+      <table>
+        <tr><th>シークレット名</th><th>用途</th></tr>
+        <tr><td>hubspot-access-token</td><td>Facebook / Instagram 投稿</td></tr>
+        <tr><td>tiktok-access-token</td><td>TikTok 動画投稿</td></tr>
+        <tr><td>wordpress-app-password</td><td>WP REST API 認証（フローA）</td></tr>
+        <tr><td>google-drive-service-account</td><td>Drive 素材取得（フローA）</td></tr>
+        <tr><td>lifull-login-email</td><td>LIFULL介護（別フロー用）</td></tr>
+        <tr><td>lifull-login-password</td><td>LIFULL介護（別フロー用）</td></tr>
+        <tr><td>sendgrid-api-key</td><td>メール通知（任意）</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ スケジュール ═══════════════ -->
+<div id="panel-schedule" class="panels panel">
+  <div class="panel-title">🕐 実行スケジュールとエンドポイント</div>
+
+  <div class="flow-grid">
+    <div class="flow-card">
+      <div class="card-title">⏰ Cloud Scheduler ジョブ</div>
+      <table>
+        <tr><th>ジョブ名</th><th>スケジュール</th><th>エンドポイント</th><th>フロー</th></tr>
+        <tr>
+          <td>sns-daily-queue-processor</td>
+          <td>0 9 * * *<br><small>毎朝9:00 JST</small></td>
+          <td>/queue/process</td>
+          <td><span class="badge badge-a">A</span></td>
+        </tr>
+        <tr>
+          <td>sns-news-poller</td>
+          <td>*/30 * * * *<br><small>30分ごと</small></td>
+          <td>/poll/news</td>
+          <td><span class="badge badge-b">B</span></td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="flow-card">
+      <div class="card-title">🌐 APIエンドポイント一覧</div>
+      <table>
+        <tr><th>メソッド</th><th>パス</th><th>説明</th></tr>
+        <tr><td>GET</td><td>/health</td><td>ヘルスチェック</td></tr>
+        <tr><td>POST</td><td>/queue/process</td><td>フローA: キュー処理（Scheduler呼び出し）</td></tr>
+        <tr><td>POST</td><td>/poll/news</td><td>フローB: お知らせポーリング（Scheduler呼び出し）</td></tr>
+        <tr><td>POST</td><td>/pubsub</td><td>Pub/Sub メッセージ受信</td></tr>
+      </table>
+    </div>
+
+    <div class="flow-card full">
+      <div class="card-title">📊 1日の実行タイムライン</div>
+      <div class="mermaid-wrap">
+        <div class="mermaid">
+gantt
+    title 1日の自動実行スケジュール
+    dateFormat HH:mm
+    axisFormat %H:%M
+
+    section フローA
+    記事生成・下書き作成     :a1, 09:00, 10m
+
+    section フローB（30分ごと）
+    お知らせチェック①       :b1, 00:00, 2m
+    お知らせチェック②       :b2, 00:30, 2m
+    お知らせチェック③       :b3, 01:00, 2m
+    お知らせチェック④       :b4, 09:00, 2m
+    お知らせチェック⑤       :b5, 09:30, 2m
+    お知らせチェック⑥       :b6, 10:00, 2m
+    お知らせチェック（以降繰り返し）  :b7, 12:00, 2m
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-card full">
+      <div class="card-title">📡 フローB 新着検知タイムライン（記事公開から投稿まで）</div>
+      <div class="mermaid-wrap">
+        <div class="mermaid">
+sequenceDiagram
+    participant WP as 🌐 WordPress<br>(aozora-cg.com)
+    participant SC as ⏰ Cloud Scheduler
+    participant CR as 🐳 Cloud Run
+    participant GCS as 💾 Cloud Storage
+    participant CL as 🤖 Claude
+    participant VEO as 🎬 Veo 3.1
+    participant HS as 📣 HubSpot
+    participant TK as 🎵 TikTok
+    participant SL as 💬 Slack
+
+    Note over WP: 担当者が記事を公開
+    SC->>CR: POST /poll/news（30分以内）
+    CR->>WP: GET /news/ をスクレイピング
+    WP-->>CR: 記事URL一覧
+    CR->>GCS: seen-urls.json を確認
+    GCS-->>CR: 投稿済みURLリスト
+    Note over CR: 新着URLを検出
+    CR->>WP: 記事ページをスクレイピング
+    WP-->>CR: タイトル・本文・画像
+    CR->>CL: SNS投稿文生成リクエスト
+    CL-->>CR: Facebook / Instagram / TikTok 用テキスト
+    par 並列処理
+        CR->>HS: Facebook 投稿
+        CR->>HS: Instagram 投稿
+        CR->>VEO: TikTok動画生成
+    end
+    VEO-->>CR: 動画データ
+    CR->>TK: TikTok 動画投稿
+    CR->>GCS: seen-urls.json 更新
+    CR->>SL: 完了通知（各プラットフォームの結果）
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      primaryColor: '#1d4ed8',
+      primaryTextColor: '#fff',
+      primaryBorderColor: '#3b82f6',
+      lineColor: '#64748b',
+      secondaryColor: '#1e293b',
+      tertiaryColor: '#0f172a',
+      background: '#ffffff',
+      mainBkg: '#e0f2fe',
+      nodeBorder: '#0284c7',
+      clusterBkg: '#f0f9ff',
+      titleColor: '#0f172a',
+      edgeLabelBackground: '#f1f5f9',
+    },
+    flowchart: { curve: 'basis', useMaxWidth: true },
+    sequence:  { useMaxWidth: true },
+    gantt:     { useMaxWidth: true },
+  });
+
+  function showTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('panel-' + name).classList.add('active');
+  }
+</script>
+</body>
+</html>

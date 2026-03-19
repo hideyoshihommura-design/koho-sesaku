@@ -29,7 +29,7 @@
 | WordPress | REST API（フローAのみ） | 完全自動 |
 | Facebook | HubSpot Social API | 完全自動 |
 | Instagram | HubSpot Social API | 完全自動 |
-| TikTok | Veo 2（動画生成）+ TikTok Content Posting API | 完全自動 |
+| TikTok | Veo 3.1（動画生成）+ TikTok Content Posting API | 完全自動 |
 | LIFULL介護 | パートナーAPI（優先）/ Playwright自動操作（代替） | 完全自動 |
 
 ---
@@ -51,7 +51,7 @@ WordPressで記事を公開
 │                                                │
 │  Cloud Run（オーケストレーター）                │
 │  ├─ Vertex AI Claude claude-sonnet-4-6         │ ← 記事・投稿文生成
-│  ├─ Vertex AI Veo 2                            │ ← TikTok用動画自動生成
+│  ├─ Vertex AI Veo 3.1                            │ ← TikTok用動画自動生成
 │  ├─ WordPress REST API（フローAのみ）           │ ← 下書き投稿
 │  ├─ WordPress REST API（フローB）              │ ← 記事内容の取得
 │  ├─ HubSpot API                                │ ← Facebook・Instagram
@@ -74,7 +74,7 @@ Facebook / Instagram / TikTok / LIFULL介護
 |------------|------|------|
 | **Cloud Run** | 自動化処理の中心 | Node.js 18+ |
 | **Vertex AI（Claude claude-sonnet-4-6）** | 記事・SNS投稿文の生成 | GCP内でAnthropicモデルを利用 |
-| **Vertex AI（Veo 2）** | TikTok用動画の自動生成 | 画像＋テキストから動画を生成 |
+| **Vertex AI（Veo 3.1）** | TikTok用動画の自動生成 | 画像＋テキストから動画を生成 |
 | **Cloud Pub/Sub** | イベントキューイング | フローA・B両方のイベントを受信 |
 | **Cloud Scheduler** | フローA：毎朝9:00に定期実行 | cron形式で設定 |
 | **Secret Manager** | 全APIキーを安全に管理 | |
@@ -138,7 +138,7 @@ Claude claude-sonnet-4-6
 並列で全プラットフォームへ自動投稿
 ├─ Facebook（HubSpot経由）
 ├─ Instagram（HubSpot経由）
-├─ TikTok（Veo 2で動画生成 → Content Posting API）
+├─ TikTok（Veo 3.1で動画生成 → Content Posting API）
 └─ LIFULL介護（パートナーAPI / Playwright）
 ```
 
@@ -153,13 +153,13 @@ Claude claude-sonnet-4-6
 
 ### 課題と解決策
 TikTokはテキスト・画像投稿に対応しておらず**動画が必須**。
-→ **Vertex AI の Veo 2** で動画を自動生成することで完全自動化を実現。
+→ **Vertex AI の Veo 3.1** で動画を自動生成することで完全自動化を実現。
 
 ### 処理フロー
 ```
 記事のアイキャッチ画像＋本文テキスト
         ↓
-Vertex AI Veo 2
+Vertex AI Veo 3.1
 画像＋テキストから15〜60秒の動画を自動生成
 （テロップ・トランジション付き）
         ↓
@@ -196,7 +196,7 @@ cloud-run-app/
 │   │   ├── queueHandler.ts   # フローA：Google Drive キュー管理
 │   │   ├── webhookHandler.ts # フローB：WordPress Webhook受信
 │   │   ├── claudeHandler.ts  # Vertex AI / Claude 呼び出し
-│   │   ├── veoHandler.ts     # Vertex AI / Veo 2 動画生成
+│   │   ├── veoHandler.ts     # Vertex AI / Veo 3.1 動画生成
 │   │   ├── wpHandler.ts      # WordPress REST API
 │   │   ├── hubspotHandler.ts # HubSpot（Facebook・Instagram）
 │   │   ├── tiktokHandler.ts  # TikTok Content Posting API
@@ -317,7 +317,7 @@ async function handleWordPressPublish(postId: string) {
 
 ### フェーズ3：TikTok完全自動化（1〜2週間）
 - [ ] TikTok Business API の申請（審査2〜4週間のため最優先）
-- [ ] Vertex AI Veo 2 での動画生成テスト
+- [ ] Vertex AI Veo 3.1 での動画生成テスト
 - [ ] Cloud Run → TikTok Content Posting API の接続
 
 ### フェーズ4：LIFULL介護完全自動化（1〜2週間）
@@ -342,7 +342,7 @@ async function handleWordPressPublish(postId: string) {
 |---------|---------|
 | Cloud Run（毎日実行） | 約$3〜5/月 |
 | Vertex AI / Claude claude-sonnet-4-6（月30記事） | 約$15〜20/月 |
-| Vertex AI / Veo 2（月30動画） | 約$15〜30/月 |
+| Vertex AI / Veo 3.1（月30動画） | 約$15〜30/月 |
 | Cloud Pub/Sub・Scheduler・Logging | ほぼ無料 |
 | Secret Manager | 約$0.06/月 |
 | HubSpot Marketing Starter | $20/月〜 |
@@ -355,7 +355,7 @@ async function handleWordPressPublish(postId: string) {
 | リスク | 対策 |
 |--------|------|
 | Claude の生成内容が不正確 | 担当者が確認後に公開（下書きフロー） |
-| Veo 2 の動画品質が低い | Cloud Storageに保存し担当者が確認・差し替えも可能 |
+| Veo 3.1 の動画品質が低い | Cloud Storageに保存し担当者が確認・差し替えも可能 |
 | TikTok APIの審査が遅れる | 審査中は担当者が手動投稿（半自動で対応） |
 | LIFULL介護がAPI非対応 | Playwright自動操作で代替 |
 | Playwrightの操作がUIChangeで壊れる | Cloud MonitoringでエラーをキャッチしてSlack通知 |

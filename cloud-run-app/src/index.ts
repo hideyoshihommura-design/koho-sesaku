@@ -2,7 +2,7 @@ import express from 'express';
 import { logger } from './utils/logger';
 import { notifyDraftCreated, notifyLowStock, notifyEmptyQueue, notifyError } from './utils/notify';
 import { withRetry, isRetryableHttpError } from './utils/retry';
-import { handleWordPressWebhook } from './handlers/webhookHandler';
+import { pollAndPost } from './handlers/webhookHandler';
 import * as queueHandler from './handlers/queueHandler';
 import * as claudeHandler from './handlers/claudeHandler';
 import * as veoHandler from './handlers/veoHandler';
@@ -33,9 +33,6 @@ function validateEnv(): void {
   }
 
   // 任意だが推奨の設定
-  if (!process.env.WEBHOOK_SECRET) {
-    logger.warn('WEBHOOK_SECRET が未設定です。Webhookエンドポイントが無認証になります');
-  }
   if (!process.env.SLACK_WEBHOOK_URL && !process.env.SENDGRID_API_KEY) {
     logger.warn('SLACK_WEBHOOK_URL / SENDGRID_API_KEY が未設定です。通知はログのみになります');
   }
@@ -49,10 +46,18 @@ app.get('/health', (_req, res) => {
 });
 
 // ─────────────────────────────────────────
-// フローB: WordPress Webhook 受信エンドポイント
-// WP Webhooks プラグインの通知先として設定する
+// フローB: お知らせページポーリングエンドポイント
+// Cloud Scheduler から 30分ごとに呼び出す
+// (POST https://[CLOUD_RUN_URL]/poll/news)
 // ─────────────────────────────────────────
-app.post('/webhook/wordpress', handleWordPressWebhook);
+app.post('/poll/news', async (_req, res) => {
+  logger.info('フローB: ポーリングリクエスト受信', { flow: 'B' });
+  res.status(200).json({ message: 'accepted' });
+
+  pollAndPost().catch(async (error) => {
+    logger.error('フローB: ポーリング処理エラー', { flow: 'B', error: String(error) });
+  });
+});
 
 // ─────────────────────────────────────────
 // フローA: Cloud Scheduler から呼ばれるエンドポイント

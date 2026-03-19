@@ -59,6 +59,15 @@ resource "google_storage_bucket" "videos" {
 }
 
 # ──────────────────────────────────────────────────────
+# Cloud Storage（フローB: 投稿済みURL管理）
+# ──────────────────────────────────────────────────────
+resource "google_storage_bucket" "state" {
+  name          = "${var.project_id}-sns-state"
+  location      = var.region
+  force_destroy = false
+}
+
+# ──────────────────────────────────────────────────────
 # Secret Manager（APIキー管理）
 # ──────────────────────────────────────────────────────
 locals {
@@ -66,10 +75,9 @@ locals {
     "wordpress-app-password",
     "hubspot-access-token",
     "tiktok-access-token",
-    "lifull-login-email",
-    "lifull-login-password",
     "google-drive-service-account",
-    "webhook-secret",          # WP Webhooksとの認証トークン
+    "lifull-login-email",      # 別フロー（LIFULL介護）用
+    "lifull-login-password",   # 別フロー（LIFULL介護）用
     "sendgrid-api-key",        # メール通知（任意）
   ]
 }
@@ -149,26 +157,16 @@ resource "google_cloud_run_v2_service" "app" {
         value = var.hubspot_instagram_channel_id
       }
       env {
-        name  = "LIFULL_API_BASE_URL"
-        value = var.lifull_api_base_url
-      }
-      env {
         name  = "GCS_BUCKET"
         value = google_storage_bucket.videos.name
       }
       env {
-        name  = "LIFULL_API_BASE_URL"
-        value = var.lifull_api_base_url
+        name  = "GCS_STATE_BUCKET"
+        value = google_storage_bucket.state.name
       }
-      # Webhook認証トークン（Secret Managerから取得）
       env {
-        name = "WEBHOOK_SECRET"
-        value_source {
-          secret_key_ref {
-            secret  = "webhook-secret"
-            version = "latest"
-          }
-        }
+        name  = "OSHIRASE_PAGE_URL"
+        value = "https://aozora-cg.com/news/"
       }
       # Slack通知（任意）
       dynamic "env" {
@@ -188,49 +186,19 @@ resource "google_cloud_run_v2_service" "app" {
       }
     }
 
-    timeout = "600s" # Veo 2 動画生成に時間がかかるため10分
+    timeout = "600s" # Veo 3.1 動画生成に時間がかかるため10分
   }
 
   depends_on = [google_project_service.apis]
 }
 
-# Cloud Run への未認証アクセスを禁止（Webhook受信用に後述のInvoker設定が必要）
+# Cloud Run への未認証アクセスを禁止（Scheduler SA のみ許可）
 resource "google_cloud_run_v2_service_iam_member" "no_public_access" {
   project  = var.project_id
   location = var.region
   name     = google_cloud_run_v2_service.app.name
   role     = "roles/run.invoker"
   member   = "serviceAccount:${google_service_account.cloud_run.email}"
-}
-
-# WP Webhooks（WordPress）からの呼び出しを許可
-# ※ Webhookの認証はリクエストヘッダーのトークンで行う
-resource "google_cloud_run_v2_service_iam_member" "webhook_invoker" {
-  project  = var.project_id
-  location = var.region
-  name     = google_cloud_run_v2_service.app.name
-  role     = "roles/run.invoker"
-  member   = "allUsers" # Webhook受信のため公開（セキュリティはヘッダートークンで）
-}
-
-# ──────────────────────────────────────────────────────
-# Cloud Pub/Sub（イベントキュー）
-# ──────────────────────────────────────────────────────
-resource "google_pubsub_topic" "wordpress_publish" {
-  name       = "wordpress-publish"
-  depends_on = [google_project_service.apis]
-}
-
-resource "google_pubsub_subscription" "wordpress_push" {
-  name  = "wordpress-publish-push"
-  topic = google_pubsub_topic.wordpress_publish.name
-
-  push_config {
-    push_endpoint = "${google_cloud_run_v2_service.app.uri}/pubsub"
-  }
-
-  ack_deadline_seconds       = 600
-  message_retention_duration = "86400s" # 24時間
 }
 
 # ──────────────────────────────────────────────────────
@@ -259,6 +227,28 @@ resource "google_cloud_scheduler_job" "daily_queue" {
   http_target {
     http_method = "POST"
     uri         = "${google_cloud_run_v2_service.app.uri}/queue/process"
+
+    oidc_token {
+      service_account_email = google_service_account.scheduler.email
+    }
+  }
+
+  depends_on = [google_project_service.apis]
+}
+
+# ──────────────────────────────────────────────────────
+# Cloud Scheduler（フローB: 30分ごとにお知らせページをポーリング）
+# ──────────────────────────────────────────────────────
+resource "google_cloud_scheduler_job" "news_poll" {
+  name             = "sns-news-poller"
+  description      = "30分ごとにaozora-cg.comのお知らせページをチェックしてSNS投稿"
+  schedule         = "*/30 * * * *"
+  time_zone        = "Asia/Tokyo"
+  attempt_deadline = "600s"
+
+  http_target {
+    http_method = "POST"
+    uri         = "${google_cloud_run_v2_service.app.uri}/poll/news"
 
     oidc_token {
       service_account_email = google_service_account.scheduler.email

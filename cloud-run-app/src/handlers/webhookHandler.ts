@@ -1,60 +1,58 @@
-import { Request, Response } from 'express';
 import { logger } from '../utils/logger';
 import { withRetry, isRetryableHttpError } from '../utils/retry';
 import { notifySNSPosted, notifyError } from '../utils/notify';
-import * as wpHandler from './wpHandler';
+import { getSeenUrls, saveSeenUrls } from '../utils/stateStore';
+import { getArticleUrls, getArticleContent, ScrapedArticle } from './scraperHandler';
 import * as claudeHandler from './claudeHandler';
 import * as veoHandler from './veoHandler';
 import * as hubspotHandler from './hubspotHandler';
 import * as tiktokHandler from './tiktokHandler';
-import * as lifullHandler from './lifullHandler';
+import axios from 'axios';
 
-const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
+// フローB: お知らせページをポーリングして新着記事をSNS投稿
+export async function pollAndPost(): Promise<{ newCount: number }> {
+  logger.info('フローB: ポーリング開始', { flow: 'B' });
 
-// フローB: WordPress Webhook を受信してSNS自動投稿を実行
-export async function handleWordPressWebhook(req: Request, res: Response): Promise<void> {
-  // Webhookトークン認証
-  if (WEBHOOK_SECRET) {
-    const token = req.headers['x-webhook-secret'] || req.query.secret;
-    if (token !== WEBHOOK_SECRET) {
-      res.status(401).json({ error: '認証エラー' });
-      return;
+  // スクレイピングで記事URL一覧を取得
+  const articles = await getArticleUrls();
+  if (articles.length === 0) {
+    logger.info('フローB: 記事が見つかりませんでした', { flow: 'B' });
+    return { newCount: 0 };
+  }
+
+  // 投稿済みURLを読み込み、新着を絞り込む
+  const seenUrls = await getSeenUrls();
+  const newArticles = articles.filter(a => !seenUrls.has(a.url));
+
+  logger.info(`フローB: 新着 ${newArticles.length} 件`, { flow: 'B', total: articles.length });
+
+  if (newArticles.length === 0) {
+    return { newCount: 0 };
+  }
+
+  // 新着記事を順次処理（並列は負荷が高いため直列）
+  for (const { url } of newArticles) {
+    try {
+      const article = await getArticleContent(url);
+      await processFlowB(article);
+      seenUrls.add(url);
+    } catch (error) {
+      logger.error('フローB: 記事処理失敗', { flow: 'B', url, error: String(error) });
+      await notifyError(`記事URL=${url}のSNS投稿処理`, error, 'B');
+      // 1件失敗しても次の記事を継続処理
     }
   }
 
-  const { post_id: postId, status } = req.body;
+  // 今回確認した全URLを保存（次回以降の重複投稿を防ぐ）
+  for (const { url } of articles) seenUrls.add(url);
+  await saveSeenUrls(seenUrls);
 
-  // 公開イベントのみ処理
-  if (status !== 'publish') {
-    res.status(200).json({ message: 'skipped: not a publish event' });
-    return;
-  }
-
-  if (!postId) {
-    res.status(400).json({ error: 'post_id が必要です' });
-    return;
-  }
-
-  logger.info(`フローB開始: WordPress記事 ID=${postId}`, { flow: 'B', postId });
-
-  // 即座に200を返してWebhookのタイムアウトを防ぐ
-  res.status(200).json({ message: 'accepted', postId });
-
-  // 非同期でSNS投稿処理を実行
-  processFlowB(String(postId)).catch(async (error) => {
-    logger.error('フローB処理エラー', { flow: 'B', postId, error: String(error) });
-    await notifyError(`WordPress記事ID=${postId}のSNS投稿処理`, error, 'B');
-  });
+  return { newCount: newArticles.length };
 }
 
-async function processFlowB(postId: string): Promise<void> {
-  // WordPress から記事内容を取得
-  const article = await withRetry(
-    () => wpHandler.getPost(postId),
-    'WordPress記事取得',
-    { maxAttempts: 3, shouldRetry: isRetryableHttpError }
-  );
-  logger.info('フローB: 記事取得完了', { flow: 'B', title: article.title });
+// 1記事分のSNS投稿処理（フローBコア）
+async function processFlowB(article: ScrapedArticle): Promise<void> {
+  logger.info('フローB: SNS投稿処理開始', { flow: 'B', title: article.title });
 
   // Claude で各SNS用投稿文を生成
   const snsPosts = await withRetry(
@@ -68,13 +66,13 @@ async function processFlowB(postId: string): Promise<void> {
     { maxAttempts: 2 }
   );
 
-  // アイキャッチ画像を取得（TikTok動画生成用）
+  // アイキャッチ画像を Buffer で取得（TikTok動画生成用）
   let thumbnailBuffer: Buffer | null = null;
   if (article.thumbnailUrl) {
-    thumbnailBuffer = await wpHandler.getThumbnailBuffer(article.thumbnailUrl);
+    thumbnailBuffer = await fetchImageBuffer(article.thumbnailUrl);
   }
 
-  // TikTok用動画を先に生成開始（最も時間がかかる）
+  // TikTok動画を先に生成開始（最も時間がかかる）
   const videoPromise = veoHandler.generateVideo({
     imageBuffer: thumbnailBuffer ?? undefined,
     caption: snsPosts.tiktokCaption,
@@ -83,8 +81,8 @@ async function processFlowB(postId: string): Promise<void> {
     return null;
   });
 
-  // Facebook・Instagram・LIFULL介護は並列投稿
-  const [fbResult, igResult, lifullResult] = await Promise.allSettled([
+  // Facebook・Instagram は HubSpot 経由で並列投稿
+  const [fbResult, igResult] = await Promise.allSettled([
     withRetry(
       () => hubspotHandler.postFacebook(snsPosts.facebookPost, article.url),
       'HubSpot Facebook投稿',
@@ -94,11 +92,6 @@ async function processFlowB(postId: string): Promise<void> {
       () => hubspotHandler.postInstagram(snsPosts.instagramPost, article.thumbnailUrl || ''),
       'HubSpot Instagram投稿',
       { maxAttempts: 3, shouldRetry: isRetryableHttpError }
-    ),
-    withRetry(
-      () => lifullHandler.post(snsPosts.lifullPost, article.url),
-      'LIFULL介護投稿',
-      { maxAttempts: 2 }
     ),
   ]);
 
@@ -118,15 +111,23 @@ async function processFlowB(postId: string): Promise<void> {
     }
   }
 
-  // 投稿結果を通知
   const results = {
     Facebook: fbResult.status === 'fulfilled',
     Instagram: igResult.status === 'fulfilled',
     TikTok: tiktokSuccess,
-    'LIFULL介護': lifullResult.status === 'fulfilled',
   };
 
   await notifySNSPosted(article.title, results);
+  logger.info('フローB: SNS投稿処理完了', { flow: 'B', title: article.title, results });
+}
 
-  logger.info('フローB完了', { flow: 'B', postId, results });
+// 画像URLを Buffer で取得
+async function fetchImageBuffer(imageUrl: string): Promise<Buffer | null> {
+  try {
+    const res = await axios.get<ArrayBuffer>(imageUrl, { responseType: 'arraybuffer', timeout: 10000 });
+    return Buffer.from(res.data);
+  } catch {
+    logger.warn('Scraper: アイキャッチ画像取得失敗', { url: imageUrl });
+    return null;
+  }
 }

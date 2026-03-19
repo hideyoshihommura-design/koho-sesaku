@@ -11,7 +11,6 @@ export interface GeneratedSNSPosts {
   facebookPost: string;
   instagramPost: string;
   tiktokCaption: string;
-  lifullPost: string;
 }
 
 export function buildSNSPrompt(input: SNSPromptInput): string {
@@ -31,14 +30,12 @@ ${input.url}
 - Facebook: 親しみやすい文体、記事の要点を伝える、最後にURL付き、300文字以内
 - Instagram: 共感を呼ぶ文体、絵文字を使って読みやすく、ハッシュタグ10個以上、本文150文字以内
 - TikTok: 短く引きつける一言、若い世代にも伝わる表現、ハッシュタグ5個、100文字以内
-- LIFULL介護: 正式な文体、施設・サービスの特徴を簡潔に、200文字以内
 
 【出力形式（JSON のみ返すこと）】
 {
   "facebookPost": "300文字以内の投稿文（URLを末尾に含める）: ${input.url}",
   "instagramPost": "150文字以内の投稿文\\n\\n#介護 #老人ホーム #ハッシュタグ...",
-  "tiktokCaption": "100文字以内のキャプション\\n\\n#介護 #ハッシュタグ...",
-  "lifullPost": "200文字以内のLIFULL介護投稿文"
+  "tiktokCaption": "100文字以内のキャプション\\n\\n#介護 #ハッシュタグ..."
 }`;
 }
 

@@ -3,9 +3,14 @@ output "cloud_run_url" {
   value       = google_cloud_run_v2_service.app.uri
 }
 
-output "webhook_url" {
-  description = "WP Webhooks プラグインに設定するURL"
-  value       = "${google_cloud_run_v2_service.app.uri}/webhook/wordpress"
+output "poll_url" {
+  description = "フローB: Cloud Scheduler が呼び出すポーリングURL"
+  value       = "${google_cloud_run_v2_service.app.uri}/poll/news"
+}
+
+output "state_bucket_name" {
+  description = "フローB: 投稿済みURL管理用GCSバケット名"
+  value       = google_storage_bucket.state.name
 }
 
 output "artifact_registry_url" {

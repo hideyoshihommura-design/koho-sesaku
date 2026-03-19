@@ -19,15 +19,15 @@ export interface GeneratedVideo {
   localPath?: string;
 }
 
-// Vertex AI Veo 2 で動画を生成する
+// Vertex AI Veo 3.1 で動画を生成する
 export async function generateVideo(input: VeoInput): Promise<GeneratedVideo> {
-  logger.info('Veo 2: 動画生成開始', { caption: input.caption.slice(0, 50) });
+  logger.info('Veo 3.1: 動画生成開始', { caption: input.caption.slice(0, 50) });
 
   const { GoogleAuth } = await import('google-auth-library');
   const auth = new GoogleAuth({ scopes: 'https://www.googleapis.com/auth/cloud-platform' });
   const accessToken = await auth.getAccessToken();
 
-  const endpoint = `https://${REGION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}/publishers/google/models/veo-2:predictLongRunning`;
+  const endpoint = `https://${REGION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}/publishers/google/models/veo-3.1:predictLongRunning`;
 
   const requestBody: Record<string, unknown> = {
     instances: [
@@ -54,7 +54,7 @@ export async function generateVideo(input: VeoInput): Promise<GeneratedVideo> {
   });
 
   const operationName = initResponse.data.name;
-  logger.info('Veo 2: 生成オペレーション開始', { operation: operationName });
+  logger.info('Veo 3.1: 生成オペレーション開始', { operation: operationName });
 
   // オペレーション完了待ち（最大5分）
   const videoData = await waitForOperation(operationName, accessToken as string);
@@ -64,7 +64,7 @@ export async function generateVideo(input: VeoInput): Promise<GeneratedVideo> {
   const gcsUri = await saveToGCS(videoData, fileName);
   const publicUrl = `https://storage.googleapis.com/${BUCKET_NAME}/${fileName}`;
 
-  logger.info('Veo 2: 動画生成完了', { gcsUri });
+  logger.info('Veo 3.1: 動画生成完了', { gcsUri });
   return { gcsUri, publicUrl };
 }
 
@@ -87,15 +87,15 @@ async function waitForOperation(operationName: string, accessToken: string): Pro
 
     if (response.data.done) {
       if (response.data.error) {
-        throw new Error(`Veo 2 エラー: ${JSON.stringify(response.data.error)}`);
+        throw new Error(`Veo 3.1 エラー: ${JSON.stringify(response.data.error)}`);
       }
       const videoBase64 = response.data.response?.predictions?.[0]?.bytesBase64Encoded;
-      if (!videoBase64) throw new Error('Veo 2: 動画データが空です');
+      if (!videoBase64) throw new Error('Veo 3.1: 動画データが空です');
       return Buffer.from(videoBase64, 'base64');
     }
   }
 
-  throw new Error('Veo 2: タイムアウト（5分以内に生成されませんでした）');
+  throw new Error('Veo 3.1: タイムアウト（5分以内に生成されませんでした）');
 }
 
 async function saveToGCS(videoBuffer: Buffer, fileName: string): Promise<string> {

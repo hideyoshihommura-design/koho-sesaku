@@ -8,9 +8,10 @@ export const SECRET_NAMES = {
   WORDPRESS_APP_PASSWORD: 'wordpress-app-password',
   HUBSPOT_ACCESS_TOKEN: 'hubspot-access-token',
   TIKTOK_ACCESS_TOKEN: 'tiktok-access-token',
+  GOOGLE_DRIVE_SERVICE_ACCOUNT: 'google-drive-service-account',
+  // 別フロー（LIFULL介護）用。フローBからは使用しない
   LIFULL_LOGIN_EMAIL: 'lifull-login-email',
   LIFULL_LOGIN_PASSWORD: 'lifull-login-password',
-  GOOGLE_DRIVE_SERVICE_ACCOUNT: 'google-drive-service-account',
 } as const;
 
 // キャッシュ（Cloud Run インスタンスのライフタイム中はキャッシュする）
@@ -34,25 +35,11 @@ export async function getSecret(secretName: string): Promise<string> {
 }
 
 export async function getAllSecrets() {
-  const [
-    wordpressPassword,
-    hubspotToken,
-    tiktokToken,
-    lifullEmail,
-    lifullPassword,
-  ] = await Promise.all([
+  const [wordpressPassword, hubspotToken, tiktokToken] = await Promise.all([
     getSecret(SECRET_NAMES.WORDPRESS_APP_PASSWORD),
     getSecret(SECRET_NAMES.HUBSPOT_ACCESS_TOKEN),
     getSecret(SECRET_NAMES.TIKTOK_ACCESS_TOKEN),
-    getSecret(SECRET_NAMES.LIFULL_LOGIN_EMAIL),
-    getSecret(SECRET_NAMES.LIFULL_LOGIN_PASSWORD),
   ]);
 
-  return {
-    wordpressPassword,
-    hubspotToken,
-    tiktokToken,
-    lifullEmail,
-    lifullPassword,
-  };
+  return { wordpressPassword, hubspotToken, tiktokToken };
 }

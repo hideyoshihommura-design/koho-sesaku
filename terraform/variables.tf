@@ -29,12 +29,6 @@ variable "hubspot_instagram_channel_id" {
   type        = string
 }
 
-variable "lifull_api_base_url" {
-  description = "LIFULL介護 パートナーAPI URL（APIが提供された場合のみ）"
-  type        = string
-  default     = ""
-}
-
 variable "image_url" {
   description = "Artifact Registry のDockerイメージURL"
   type        = string

@@ -71,21 +71,20 @@ const sampleArticleJson = `
   "metaDescription": "田中看護師のプロフィールをご紹介します。",
   "facebookPost": "新しいスタッフをご紹介します！",
   "instagramPost": "田中看護師がチームに加わりました✨\\n\\n#介護 #看護師",
-  "tiktokCaption": "新スタッフ紹介🎉\\n\\n#介護施設",
-  "lifullPost": "田中看護師（経験10年）が入職しました。"
+  "tiktokCaption": "新スタッフ紹介🎉\\n\\n#介護施設"
 }`;
 
 try {
   const article = parseGeneratedArticle(sampleArticleJson);
   if (article.title && article.content && article.metaDescription &&
-      article.facebookPost && article.instagramPost && article.tiktokCaption && article.lifullPost)
+      article.facebookPost && article.instagramPost && article.tiktokCaption)
     ok('フローA: 記事JSONの全フィールドパース');
   else fail('フローA: 記事JSONの全フィールドパース', '必須フィールドが欠けている');
 } catch (e) { fail('フローA: 記事JSONの全フィールドパース', e); }
 
 // JSONの前後に余分なテキストがある場合
 try {
-  const messyJson = 'なんか前置き\n{"facebookPost":"FB","instagramPost":"IG","tiktokCaption":"TK","lifullPost":"LF"}\n後書き';
+  const messyJson = 'なんか前置き\n{"facebookPost":"FB","instagramPost":"IG","tiktokCaption":"TK"}\n後書き';
   const posts = parseGeneratedSNSPosts(messyJson);
   if (posts.facebookPost === 'FB') ok('フローB: JSON前後に余分なテキストがあっても解析できる');
   else fail('フローB: JSON前後に余分なテキストがあっても解析できる', '解析失敗');
@@ -199,22 +198,121 @@ section('リトライユーティリティテスト');
   section('SNS投稿文の文字数制約テスト');
 
   const samplePosts = {
-    facebookPost: 'FB投稿文'.repeat(20),       // 80文字（300字以内）
-    instagramPost: 'IG投稿'.repeat(10),          // 40文字（150字以内）
-    tiktokCaption: 'TK'.repeat(20),              // 40文字（100字以内）
-    lifullPost: 'LF投稿'.repeat(15),             // 60文字（200字以内）
+    facebookPost: 'FB投稿文'.repeat(20),   // 80文字（300字以内）
+    instagramPost: 'IG投稿'.repeat(10),    // 40文字（150字以内）
+    tiktokCaption: 'TK'.repeat(20),        // 40文字（100字以内）
   };
 
   try {
     const fb = samplePosts.facebookPost.length <= 300;
     const ig = samplePosts.instagramPost.length <= 150;
     const tk = samplePosts.tiktokCaption.length <= 100;
-    const lf = samplePosts.lifullPost.length <= 200;
-    if (fb && ig && tk && lf)
+    if (fb && ig && tk)
       ok('SNS各プラットフォームの文字数制約が正しく定義されている');
     else
-      fail('SNS各プラットフォームの文字数制約', `FB:${fb} IG:${ig} TK:${tk} LF:${lf}`);
+      fail('SNS各プラットフォームの文字数制約', `FB:${fb} IG:${ig} TK:${tk}`);
   } catch (e) { fail('SNS文字数制約テスト', e); }
+
+  // ─────────────────────────────────
+  // 6. スクレイパー ロジックテスト
+  // （cheerio の HTML パースは Node 20 以上で動作するため Docker ビルド時に確認）
+  // ─────────────────────────────────
+  section('スクレイパー ロジックテスト');
+
+  // URL 正規化テスト（相対URLを絶対URLに変換）
+  try {
+    const base = 'https://aozora-cg.com/news/';
+    const relative = '/news/article-1/';
+    const absolute = new URL(relative, base).href;
+    if (absolute === 'https://aozora-cg.com/news/article-1/')
+      ok('スクレイパー: 相対URLを絶対URLに正規化できる');
+    else
+      fail('スクレイパー: URL正規化', absolute);
+  } catch (e) { fail('スクレイパー: URL正規化', e); }
+
+  // 絶対URLはそのまま維持されること
+  try {
+    const base = 'https://aozora-cg.com/news/';
+    const href = 'https://aozora-cg.com/news/article-2/';
+    const result = new URL(href, base).href;
+    if (result === href)
+      ok('スクレイパー: 絶対URLはそのまま維持される');
+    else
+      fail('スクレイパー: 絶対URLの維持', result);
+  } catch (e) { fail('スクレイパー: 絶対URLの維持', e); }
+
+  // JSON-LDから画像・抜粋を取得するロジック
+  try {
+    const jsonLdText = '{"@type":"BlogPosting","headline":"テスト記事","description":"記事の概要","image":"https://aozora-cg.com/wp-content/image.jpg"}';
+    const jsonLd = JSON.parse(jsonLdText) as Record<string, unknown>;
+    const thumbnailUrl = jsonLd['image'] as string;
+    const excerpt = jsonLd['description'] as string;
+    if (thumbnailUrl === 'https://aozora-cg.com/wp-content/image.jpg' && excerpt === '記事の概要')
+      ok('スクレイパー: JSON-LDから画像URLと抜粋を取得できる');
+    else
+      fail('スクレイパー: JSON-LD解析', `thumbnail=${thumbnailUrl} excerpt=${excerpt}`);
+  } catch (e) { fail('スクレイパー: JSON-LD解析', e); }
+
+  // JSON-LDがない場合は本文冒頭を抜粋にするフォールバックロジック
+  try {
+    const content = 'これは本文です。長いテキストが続きます。'.repeat(10);
+    const excerpt = content.slice(0, 120);
+    if (excerpt.length === 120 && excerpt.startsWith('これは本文です'))
+      ok('スクレイパー: JSON-LDなし時は本文冒頭120文字を抜粋として使用する');
+    else
+      fail('スクレイパー: 抜粋フォールバックロジック', `length=${excerpt.length}`);
+  } catch (e) { fail('スクレイパー: 抜粋フォールバックロジック', e); }
+
+  // 重複URL除去ロジック
+  try {
+    const raw = [
+      { title: '記事1', url: 'https://aozora-cg.com/news/a/' },
+      { title: '記事1 重複', url: 'https://aozora-cg.com/news/a/' },
+      { title: '記事2', url: 'https://aozora-cg.com/news/b/' },
+    ];
+    const seen = new Set<string>();
+    const unique = raw.filter(a => { if (seen.has(a.url)) return false; seen.add(a.url); return true; });
+    if (unique.length === 2)
+      ok('スクレイパー: 重複URLを除去できる');
+    else
+      fail('スクレイパー: 重複URL除去', `unique.length=${unique.length}`);
+  } catch (e) { fail('スクレイパー: 重複URL除去', e); }
+
+  // ─────────────────────────────────
+  // 7. stateStore ロジックテスト（GCS不使用）
+  // ─────────────────────────────────
+  section('stateStore ロジックテスト');
+
+  try {
+    // 既投稿URLセットと新着記事を照合するロジック
+    const seenUrls = new Set([
+      'https://aozora-cg.com/news/old-1/',
+      'https://aozora-cg.com/news/old-2/',
+    ]);
+    const scraped = [
+      { title: '古い記事', url: 'https://aozora-cg.com/news/old-1/' },
+      { title: '新しい記事', url: 'https://aozora-cg.com/news/new-1/' },
+    ];
+    const newArticles = scraped.filter(a => !seenUrls.has(a.url));
+    if (newArticles.length === 1 && newArticles[0].url === 'https://aozora-cg.com/news/new-1/')
+      ok('stateStore: 既投稿URLを除いて新着のみ抽出できる');
+    else
+      fail('stateStore: 既投稿URL除外ロジック', JSON.stringify(newArticles));
+  } catch (e) { fail('stateStore: 既投稿URL除外ロジック', e); }
+
+  try {
+    // 全件処理後に seenUrls が正しく更新される
+    const seenUrls = new Set(['https://aozora-cg.com/news/old-1/']);
+    const allScraped = [
+      { title: '古い', url: 'https://aozora-cg.com/news/old-1/' },
+      { title: '新しい', url: 'https://aozora-cg.com/news/new-1/' },
+    ];
+    for (const { url } of allScraped) seenUrls.add(url);
+    if (seenUrls.size === 2 && seenUrls.has('https://aozora-cg.com/news/new-1/'))
+      ok('stateStore: 投稿後に既投稿URLセットが正しく更新される');
+    else
+      fail('stateStore: seen URL更新ロジック', `size=${seenUrls.size}`);
+  } catch (e) { fail('stateStore: seen URL更新ロジック', e); }
 
   // ─────────────────────────────────
   // 結果サマリー

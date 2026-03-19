@@ -3,9 +3,10 @@
 
 project_id                   = "your-gcp-project-id"
 region                       = "asia-northeast1"
-wordpress_base_url           = "https://your-wordpress-site.com"
+wordpress_base_url           = "https://aozora-cg.com"
 wordpress_username           = "your-wp-username"
 hubspot_facebook_channel_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 hubspot_instagram_channel_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-lifull_api_base_url          = ""  # APIが提供された場合のみ設定
 image_url                    = "asia-northeast1-docker.pkg.dev/your-gcp-project-id/sns-auto-post/app:latest"
+slack_webhook_url            = ""  # Slack通知を使う場合のみ設定
+notify_email                 = ""  # メール通知を使う場合のみ設定
