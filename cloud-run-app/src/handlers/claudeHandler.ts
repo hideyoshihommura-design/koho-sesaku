@@ -1,86 +1,75 @@
-import AnthropicVertex from '@anthropic-ai/vertex-sdk';
+import { VertexAI, Part } from '@google-cloud/vertexai';
 import { buildArticlePrompt, parseGeneratedArticle, ArticlePromptInput, GeneratedArticle } from '../prompts/articlePrompt';
 import { buildSNSPrompt, parseGeneratedSNSPosts, SNSPromptInput, GeneratedSNSPosts } from '../prompts/snsPrompt';
 import { logger } from '../utils/logger';
 
 const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT!;
-const REGION = process.env.VERTEX_AI_REGION || 'us-east5'; // Claudeが使えるリージョン
-const MODEL = 'claude-sonnet-4-5'; // Vertex AI 上のClaude Sonnet
+const REGION = process.env.GEMINI_REGION || 'us-central1';
+const MODEL = 'gemini-2.0-flash-001';
 
-const client = new AnthropicVertex({ projectId: PROJECT_ID, region: REGION });
+const vertexAI = new VertexAI({ project: PROJECT_ID, location: REGION });
+const model = vertexAI.getGenerativeModel({ model: MODEL });
 
-// 画像をBase64でClaudeに渡して内容を説明させる
+// 画像をBase64でGeminiに渡して内容を説明させる
 export async function analyzeImages(imageBuffers: Buffer[]): Promise<string> {
   if (imageBuffers.length === 0) return '画像なし';
 
-  logger.info('Claude: 画像解析開始', { flow: 'A', count: imageBuffers.length });
+  logger.info('Gemini: 画像解析開始', { flow: 'A', count: imageBuffers.length });
 
-  const imageContents = imageBuffers.slice(0, 5).map((buf) => ({
-    type: 'image' as const,
-    source: {
-      type: 'base64' as const,
-      media_type: 'image/jpeg' as const,
+  const imageParts: Part[] = imageBuffers.slice(0, 5).map((buf) => ({
+    inlineData: {
+      mimeType: 'image/jpeg',
       data: buf.toString('base64'),
     },
   }));
 
-  const response = await client.messages.create({
-    model: MODEL,
-    max_tokens: 1024,
-    messages: [
+  const result = await model.generateContent({
+    contents: [
       {
         role: 'user',
-        content: [
-          ...imageContents,
-          {
-            type: 'text',
-            text: '上記の画像を日本語で詳しく説明してください。介護施設や介護サービスに関連する要素があれば特に詳しく。',
-          },
+        parts: [
+          ...imageParts,
+          { text: '上記の画像を日本語で詳しく説明してください。介護施設や介護サービスに関連する要素があれば特に詳しく。' },
         ],
       },
     ],
   });
 
-  const text = response.content[0];
-  return text.type === 'text' ? text.text : '';
+  return result.response.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 }
 
 // フローA：記事＋SNS投稿文を一括生成
 export async function generateArticle(input: ArticlePromptInput): Promise<GeneratedArticle> {
-  logger.info('Claude: 記事生成開始', { flow: 'A', folder: input.folderName });
+  logger.info('Gemini: 記事生成開始', { flow: 'A', folder: input.folderName });
 
   const prompt = buildArticlePrompt(input);
 
-  const response = await client.messages.create({
-    model: MODEL,
-    max_tokens: 4096,
-    messages: [{ role: 'user', content: prompt }],
+  const result = await model.generateContent({
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
   });
 
-  const text = response.content[0];
-  if (text.type !== 'text') throw new Error('予期しないレスポンス形式');
+  const text = result.response.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error('予期しないレスポンス形式');
 
-  const article = parseGeneratedArticle(text.text);
-  logger.info('Claude: 記事生成完了', { flow: 'A', title: article.title });
+  const article = parseGeneratedArticle(text);
+  logger.info('Gemini: 記事生成完了', { flow: 'A', title: article.title });
   return article;
 }
 
 // フローB：SNS投稿文のみ最適化生成
 export async function generateSNSPosts(input: SNSPromptInput): Promise<GeneratedSNSPosts> {
-  logger.info('Claude: SNS投稿文生成開始', { flow: 'B', url: input.url });
+  logger.info('Gemini: SNS投稿文生成開始', { flow: 'B', url: input.url });
 
   const prompt = buildSNSPrompt(input);
 
-  const response = await client.messages.create({
-    model: MODEL,
-    max_tokens: 2048,
-    messages: [{ role: 'user', content: prompt }],
+  const result = await model.generateContent({
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
   });
 
-  const text = response.content[0];
-  if (text.type !== 'text') throw new Error('予期しないレスポンス形式');
+  const text = result.response.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error('予期しないレスポンス形式');
 
-  const posts = parseGeneratedSNSPosts(text.text);
-  logger.info('Claude: SNS投稿文生成完了', { flow: 'B' });
+  const posts = parseGeneratedSNSPosts(text);
+  logger.info('Gemini: SNS投稿文生成完了', { flow: 'B' });
   return posts;
 }

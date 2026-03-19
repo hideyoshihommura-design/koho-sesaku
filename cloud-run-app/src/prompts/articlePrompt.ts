@@ -54,7 +54,7 @@ export function parseGeneratedArticle(responseText: string): GeneratedArticle {
   // JSONブロックを抽出
   const jsonMatch = responseText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    throw new Error('Claude のレスポンスからJSONを抽出できませんでした');
+    throw new Error('Gemini のレスポンスからJSONを抽出できませんでした');
   }
   return JSON.parse(jsonMatch[0]) as GeneratedArticle;
 }
