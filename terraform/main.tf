@@ -268,27 +268,4 @@ resource "google_cloud_scheduler_job" "news_poll" {
   depends_on = [google_project_service.apis]
 }
 
-# ──────────────────────────────────────────────────────
-# Cloud Monitoring アラート（エラー通知）
-# ──────────────────────────────────────────────────────
-resource "google_monitoring_alert_policy" "error_alert" {
-  display_name = "SNS自動投稿 エラーアラート"
-  combiner     = "OR"
-
-  conditions {
-    display_name = "Cloud Run エラーログ"
-    condition_matched_log {
-      filter = <<-EOT
-        resource.type="cloud_run_revision"
-        resource.labels.service_name="sns-auto-post"
-        severity="ERROR"
-      EOT
-    }
-  }
-
-  notification_channels = []  # メール通知を追加する場合はここにチャンネルIDを設定
-
-  alert_strategy {
-    notification_rate_limit { period = "300s" } # 5分に1回
-  }
-}
+# Cloud Monitoring アラートは手動で設定してください
