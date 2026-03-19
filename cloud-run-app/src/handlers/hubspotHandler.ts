@@ -16,7 +16,7 @@ export async function postFacebook(message: string, articleUrl: string): Promise
     {
       channelGuid: channelAccountId,
       content: {
-        body: `${message}\n\n${articleUrl}`,
+        body: `${message}\n\n詳細はコチラ👉 https://aozora-cg.com/`,
       },
     },
     {
@@ -51,7 +51,7 @@ export async function postInstagram(caption: string, imageUrl: string): Promise<
     logger.warn('Instagram: アイキャッチ画像がないため投稿をスキップします', { platform: 'Instagram' });
     return;
   }
-  body.content = { body: caption, photoUrl: imageUrl };
+  body.content = { body: `${caption}\n\n🔗 詳細は概要欄のHPへ`, photoUrl: imageUrl };
 
   const response = await axios.post(
     `${HUBSPOT_API_BASE}/broadcast/v1/broadcasts`,
