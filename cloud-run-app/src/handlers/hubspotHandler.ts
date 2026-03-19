@@ -6,7 +6,7 @@ const HUBSPOT_API_BASE = 'https://api.hubapi.com';
 
 // HubSpot Social API でFacebookに投稿
 export async function postFacebook(message: string, articleUrl: string): Promise<void> {
-  logger.info('HubSpot: Facebook投稿開始', { flow: 'B', platform: 'Facebook' });
+  logger.info('HubSpot: Facebook下書き保存開始', { flow: 'B', platform: 'Facebook' });
 
   const token = await getSecret(SECRET_NAMES.HUBSPOT_ACCESS_TOKEN);
   const channelAccountId = process.env.HUBSPOT_FACEBOOK_CHANNEL_ID!;
@@ -15,7 +15,6 @@ export async function postFacebook(message: string, articleUrl: string): Promise
     `${HUBSPOT_API_BASE}/broadcast/v1/broadcasts`,
     {
       channelGuid: channelAccountId,
-      triggerAt: new Date().toISOString(),
       content: {
         body: `${message}\n\n${articleUrl}`,
       },
@@ -28,7 +27,7 @@ export async function postFacebook(message: string, articleUrl: string): Promise
     }
   );
 
-  logger.info('HubSpot: Facebook投稿完了', {
+  logger.info('HubSpot: Facebook下書き保存完了', {
     platform: 'Facebook',
     broadcastId: response.data.broadcastGuid,
   });
@@ -36,7 +35,7 @@ export async function postFacebook(message: string, articleUrl: string): Promise
 
 // HubSpot Social API でInstagramに投稿
 export async function postInstagram(caption: string, imageUrl: string): Promise<void> {
-  logger.info('HubSpot: Instagram投稿開始', { flow: 'B', platform: 'Instagram' });
+  logger.info('HubSpot: Instagram下書き保存開始', { flow: 'B', platform: 'Instagram' });
 
   const token = await getSecret(SECRET_NAMES.HUBSPOT_ACCESS_TOKEN);
   const channelAccountId = process.env.HUBSPOT_INSTAGRAM_CHANNEL_ID!;
@@ -65,7 +64,7 @@ export async function postInstagram(caption: string, imageUrl: string): Promise<
     }
   );
 
-  logger.info('HubSpot: Instagram投稿完了', {
+  logger.info('HubSpot: Instagram下書き保存完了', {
     platform: 'Instagram',
     broadcastId: response.data.broadcastGuid,
   });
@@ -82,7 +81,6 @@ export async function postX(message: string, articleUrl: string): Promise<void> 
     `${HUBSPOT_API_BASE}/broadcast/v1/broadcasts`,
     {
       channelGuid: channelAccountId,
-      triggerAt: new Date().toISOString(),
       content: {
         body: `${message}\n\n${articleUrl}`,
       },
@@ -112,7 +110,6 @@ export async function postTikTok(caption: string, videoPublicUrl: string): Promi
     `${HUBSPOT_API_BASE}/broadcast/v1/broadcasts`,
     {
       channelGuid: channelAccountId,
-      triggerAt: new Date().toISOString(),
       content: {
         body: caption,
         videoUrl: videoPublicUrl,
