@@ -1,7 +1,6 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════
-#  SNS自動投稿システム セットアップスクリプト
-#  対象: Google Cloud Shell
+#  SNS自動投稿システム セットアップスクリプト（完全自動）
 #  使い方: bash scripts/setup.sh
 # ═══════════════════════════════════════════════════════════════
 set -e
@@ -9,6 +8,8 @@ set -e
 PROJECT_ID="ozora-sns-auto"
 REGION="asia-northeast1"
 IMAGE_URL="${REGION}-docker.pkg.dev/${PROJECT_ID}/sns-auto-post/app:latest"
+FB_CHANNEL_ID="a4fe7798-6a1f-34e4-b864-2ef1ce370109"
+IG_CHANNEL_ID="11f18f58-5a26-32a8-983c-9db401d5e0a7"
 
 echo ""
 echo "╔══════════════════════════════════════════╗"
@@ -18,26 +19,20 @@ echo ""
 echo "プロジェクトID : $PROJECT_ID"
 echo "リージョン     : $REGION"
 echo ""
-read -rp "上記の設定で開始しますか？ (y/N): " CONFIRM
-if [ "$CONFIRM" != "y" ] && [ "$CONFIRM" != "Y" ]; then
-  echo "キャンセルしました"
-  exit 0
-fi
 
 # ──────────────────────────────────────────────
 # Step 1: プロジェクト設定
 # ──────────────────────────────────────────────
-echo ""
-echo "▶ Step 1/7: GCPプロジェクトを設定中..."
-gcloud config set project "$PROJECT_ID"
-gcloud config set run/region "$REGION"
+echo "▶ Step 1/5: GCPプロジェクトを設定中..."
+gcloud config set project "$PROJECT_ID" --quiet
+gcloud config set run/region "$REGION" --quiet
 echo "✅ 完了"
 
 # ──────────────────────────────────────────────
 # Step 2: 必要なAPIを有効化
 # ──────────────────────────────────────────────
 echo ""
-echo "▶ Step 2/7: APIを有効化中（数分かかります）..."
+echo "▶ Step 2/5: APIを有効化中（数分かかります）..."
 gcloud services enable \
   run.googleapis.com \
   cloudscheduler.googleapis.com \
@@ -52,116 +47,28 @@ gcloud services enable \
 echo "✅ 完了"
 
 # ──────────────────────────────────────────────
-# Step 3: HubSpotトークン入力 → チャンネルID自動取得
+# Step 3: terraform.tfvars を生成
 # ──────────────────────────────────────────────
 echo ""
-echo "▶ Step 3/7: HubSpotチャンネルIDを自動取得中..."
-echo ""
-echo "HubSpotのアクセストークンを入力してください（pat-na2-xxx...）"
-read -rs HUBSPOT_TOKEN
-echo ""
-
-if [ -z "$HUBSPOT_TOKEN" ]; then
-  echo "❌ トークンが入力されませんでした"
-  exit 1
-fi
-
-# HubSpot APIでチャンネル一覧を取得
-echo "HubSpotのチャンネル情報を取得中..."
-CHANNELS=$(curl -s "https://api.hubapi.com/broadcast/v1/channels/setting/publish/current" \
-  -H "Authorization: Bearer ${HUBSPOT_TOKEN}")
-
-if echo "$CHANNELS" | grep -q '"error"'; then
-  echo "❌ HubSpotのAPIエラー。トークンを確認してください"
-  echo "$CHANNELS"
-  exit 1
-fi
-
-echo ""
-echo "接続済みのチャンネル一覧:"
-echo "──────────────────────────────────────"
-echo "$CHANNELS" | python3 -c "
-import json,sys
-data=json.load(sys.stdin)
-for i,ch in enumerate(data):
-    print(f'  [{i}] {ch.get(\"type\",\"\")} : {ch.get(\"channelGuid\",\"\")} ({ch.get(\"name\",\"\")})')
-"
-echo "──────────────────────────────────────"
-echo ""
-
-# Facebookの自動検出
-FB_CHANNEL_ID=$(echo "$CHANNELS" | python3 -c "
-import json,sys
-data=json.load(sys.stdin)
-for ch in data:
-    if 'FACEBOOK' in ch.get('type','').upper():
-        print(ch.get('channelGuid',''))
-        break
-" 2>/dev/null || echo "")
-
-# Instagramの自動検出
-IG_CHANNEL_ID=$(echo "$CHANNELS" | python3 -c "
-import json,sys
-data=json.load(sys.stdin)
-for ch in data:
-    if 'INSTAGRAM' in ch.get('type','').upper():
-        print(ch.get('channelGuid',''))
-        break
-" 2>/dev/null || echo "")
-
-if [ -n "$FB_CHANNEL_ID" ]; then
-  echo "✅ Facebook チャンネルID: $FB_CHANNEL_ID"
-else
-  echo "⚠ Facebookが見つかりませんでした。番号を入力してください（上のリストから）:"
-  read -rp "番号: " FB_IDX
-  FB_CHANNEL_ID=$(echo "$CHANNELS" | python3 -c "
-import json,sys
-data=json.load(sys.stdin)
-print(data[${FB_IDX}].get('channelGuid',''))
-")
-fi
-
-if [ -n "$IG_CHANNEL_ID" ]; then
-  echo "✅ Instagram チャンネルID: $IG_CHANNEL_ID"
-else
-  echo "⚠ Instagramが見つかりませんでした。番号を入力してください（上のリストから）:"
-  read -rp "番号: " IG_IDX
-  IG_CHANNEL_ID=$(echo "$CHANNELS" | python3 -c "
-import json,sys
-data=json.load(sys.stdin)
-print(data[${IG_IDX}].get('channelGuid',''))
-")
-fi
-
-echo ""
-echo "（XとTikTokは後から追加できます。今はそのままEnterでスキップ）"
-read -rp "X（旧Twitter）チャンネルID（任意）: " X_CHANNEL_ID
-read -rp "TikTok チャンネルID（任意）: " TIKTOK_CHANNEL_ID
-echo "✅ 完了"
-
-# ──────────────────────────────────────────────
-# Step 4: terraform.tfvars を生成
-# ──────────────────────────────────────────────
-echo ""
-echo "▶ Step 4/7: terraform.tfvarsを生成中..."
-cat > terraform/terraform.tfvars <<EOF
+echo "▶ Step 3/5: 設定ファイルを生成中..."
+cat > terraform/terraform.tfvars <<TFVARS
 project_id                   = "${PROJECT_ID}"
 region                       = "${REGION}"
 wordpress_base_url           = "https://aozora-cg.com"
 wordpress_username           = "your-wp-username"
 hubspot_facebook_channel_id  = "${FB_CHANNEL_ID}"
 hubspot_instagram_channel_id = "${IG_CHANNEL_ID}"
-hubspot_x_channel_id         = "${X_CHANNEL_ID}"
-hubspot_tiktok_channel_id    = "${TIKTOK_CHANNEL_ID}"
+hubspot_x_channel_id         = ""
+hubspot_tiktok_channel_id    = ""
 image_url                    = "${IMAGE_URL}"
-EOF
-echo "✅ terraform/terraform.tfvars を生成しました"
+TFVARS
+echo "✅ 完了"
 
 # ──────────────────────────────────────────────
-# Step 5: Terraform でインフラ構築
+# Step 4: Terraform でインフラ構築
 # ──────────────────────────────────────────────
 echo ""
-echo "▶ Step 5/7: Terraformでインフラを構築中（数分かかります）..."
+echo "▶ Step 4/5: インフラを構築中（数分かかります）..."
 cd terraform
 terraform init -upgrade -input=false
 terraform apply -auto-approve -input=false
@@ -169,44 +76,15 @@ cd ..
 echo "✅ 完了"
 
 # ──────────────────────────────────────────────
-# Step 6: HubSpotトークンをSecret Managerに登録
+# Step 5: Dockerイメージをビルド＆デプロイ
 # ──────────────────────────────────────────────
 echo ""
-echo "▶ Step 6/7: HubSpotトークンをSecret Managerに登録中..."
-echo ""
-echo "先ほど取得したHubSpotのアクセストークンを入力してください"
-echo "（pat-na2-xxx... の形式）"
-read -rs HUBSPOT_TOKEN
-echo ""
-
-if [ -n "$HUBSPOT_TOKEN" ]; then
-  # 既存バージョンがある場合は新バージョンを追加、なければ作成
-  if gcloud secrets describe "hubspot-access-token" --project="$PROJECT_ID" &>/dev/null; then
-    echo -n "$HUBSPOT_TOKEN" | gcloud secrets versions add "hubspot-access-token" \
-      --project="$PROJECT_ID" --data-file=-
-    echo "✅ hubspot-access-token を更新しました"
-  else
-    echo -n "$HUBSPOT_TOKEN" | gcloud secrets create "hubspot-access-token" \
-      --project="$PROJECT_ID" \
-      --data-file=- \
-      --replication-policy="automatic"
-    echo "✅ hubspot-access-token を登録しました"
-  fi
-else
-  echo "⚠ トークンの入力がありませんでした。後で以下のコマンドで登録してください:"
-  echo "  bash scripts/setup-secrets.sh"
-fi
-
-# ──────────────────────────────────────────────
-# Step 7: Dockerイメージをビルド＆デプロイ
-# ──────────────────────────────────────────────
-echo ""
-echo "▶ Step 7/7: Dockerイメージをビルド中（5〜10分かかります）..."
+echo "▶ Step 5/5: アプリをビルド中（5〜10分かかります）..."
 gcloud builds submit cloud-run-app/ \
   --tag "$IMAGE_URL" \
   --project="$PROJECT_ID" \
   --quiet
-echo "✅ ビルド・プッシュ完了"
+echo "✅ ビルド完了"
 
 echo ""
 echo "▶ Cloud Run にデプロイ中..."
@@ -217,23 +95,22 @@ gcloud run services update sns-auto-post \
 echo "✅ デプロイ完了"
 
 # ──────────────────────────────────────────────
-# 完了メッセージ
+# 完了
 # ──────────────────────────────────────────────
 SERVICE_URL=$(gcloud run services describe sns-auto-post \
   --region "$REGION" \
-  --format="value(status.url)" 2>/dev/null || echo "（URLの取得に失敗しました）")
+  --format="value(status.url)" 2>/dev/null || echo "")
 
 echo ""
 echo "╔══════════════════════════════════════════╗"
 echo "║  ✅ セットアップ完了！                    ║"
 echo "╚══════════════════════════════════════════╝"
 echo ""
-echo "サービスURL : $SERVICE_URL"
-echo "ポーリングURL: ${SERVICE_URL}/poll/news"
+echo "サービスURL: $SERVICE_URL"
 echo ""
-echo "動作確認（手動でフローBを実行）:"
-echo "  curl -X POST ${SERVICE_URL}/poll/news \\"
-echo "    -H \"Authorization: Bearer \$(gcloud auth print-identity-token)\""
-echo ""
-echo "Cloud Schedulerが30分ごとに自動実行されます。"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo " 最後にHubSpotトークンを登録してください"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo " bash scripts/register-token.sh"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
