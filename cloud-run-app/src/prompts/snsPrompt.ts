@@ -15,8 +15,8 @@ export interface GeneratedSNSPosts {
 }
 
 export function buildSNSPrompt(input: SNSPromptInput): string {
-  return `以下のWordPress記事をもとに、各SNSに最適化した投稿文を生成してください。
-記事の内容を変えず、各プラットフォームのトーン・文字数に合わせること。
+  return `以下の記事内容を、各SNSの文字数・形式に合わせて整形してください。
+記事の内容・表現・ニュアンスは一切変えないこと。要約や言い換えはしないこと。
 
 【記事タイトル】
 ${input.title}
@@ -27,18 +27,18 @@ ${(input.excerpt || input.content).slice(0, 500)}
 【記事URL】
 ${input.url}
 
-【各SNS投稿文のルール】
-- Facebook: 親しみやすい文体、記事の要点を伝える、最後にURL付き、300文字以内
-- Instagram: 共感を呼ぶ文体、絵文字を使って読みやすく、ハッシュタグ10個以上、本文150文字以内
-- X（旧Twitter）: 簡潔でシャープな文体、URL付き、ハッシュタグ3個以内、URL込みで140文字以内
-- TikTok: 短く引きつける一言、若い世代にも伝わる表現、ハッシュタグ5個、100文字以内
+【各SNSの形式ルール（内容は変えず形式のみ調整すること）】
+- Facebook: 記事タイトルと本文の冒頭をそのまま使用、最後にURL付き、300文字以内
+- Instagram: 記事タイトルと本文の冒頭をそのまま使用、改行で読みやすく整形、ハッシュタグ5〜10個を末尾に追加、本文150文字以内
+- X（旧Twitter）: 記事タイトルをそのまま使用、URL付き、ハッシュタグ2〜3個を末尾に追加、URL込みで140文字以内
+- TikTok: 記事タイトルをそのまま使用、ハッシュタグ3〜5個を末尾に追加、100文字以内
 
 【出力形式（JSON のみ返すこと）】
 {
-  "facebookPost": "300文字以内の投稿文（URLを末尾に含める）: ${input.url}",
-  "instagramPost": "150文字以内の投稿文\\n\\n#介護 #老人ホーム #ハッシュタグ...",
-  "xPost": "URL込み140文字以内の投稿文 ${input.url} #介護 #ハッシュタグ",
-  "tiktokCaption": "100文字以内のキャプション\\n\\n#介護 #ハッシュタグ..."
+  "facebookPost": "記事の内容そのまま（URLを末尾に含める）: ${input.url}",
+  "instagramPost": "記事の内容そのまま\\n\\n#ハッシュタグ1 #ハッシュタグ2...",
+  "xPost": "記事タイトルそのまま ${input.url} #ハッシュタグ",
+  "tiktokCaption": "記事タイトルそのまま\\n\\n#ハッシュタグ1..."
 }`;
 }
 
