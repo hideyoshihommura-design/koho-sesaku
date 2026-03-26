@@ -56,11 +56,12 @@ Claude APIで最適化提案 → 管理画面にレポート表示
 
 #### 2-1. Vertex AI Veo 動画生成
 - 素材画像 → TikTok用縦型動画（9:16）
+- 素材画像 → Instagram Reels用縦型動画（9:16）
 - キャプションをもとにテロップ生成
-- Cloud Storageに保存
+- それぞれCloud Storageに保存
 
 #### 2-2. Firestoreに紐付け
-- フェーズ1の承認待ちデータに動画URLを追加
+- フェーズ1の承認待ちデータにTikTok・Instagram両動画URLを追加
 
 ---
 
@@ -100,7 +101,8 @@ Claude APIで最適化提案 → 管理画面にレポート表示
 #### 4-3. Instagram
 - Instagram Graph API（Facebook経由）
 - 2ステップ投稿（メディア作成 → 公開）
-- 画像必須のため画像なし時はスキップ
+- 動画あり → Reels投稿
+- 動画なし → 画像投稿（画像もなければスキップ）
 
 #### 4-4. TikTok
 - TikTok Content Posting API
