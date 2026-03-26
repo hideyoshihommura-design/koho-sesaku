@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>SNS自動投稿システム 計画図</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      padding: 40px 24px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.6rem;
+      margin-bottom: 8px;
+      color: #f8fafc;
+      letter-spacing: 0.05em;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 0.9rem;
+      color: #94a3b8;
+      margin-bottom: 48px;
+    }
+
+    .section {
+      max-width: 1000px;
+      margin: 0 auto 56px;
+    }
+
+    .section-title {
+      font-size: 1rem;
+      font-weight: bold;
+      color: #7dd3fc;
+      border-left: 4px solid #7dd3fc;
+      padding-left: 12px;
+      margin-bottom: 20px;
+      letter-spacing: 0.05em;
+    }
+
+    .mermaid {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 32px 24px;
+      overflow-x: auto;
+    }
+
+    .phase-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      max-width: 1000px;
+      margin: 0 auto 56px;
+    }
+
+    .phase-card {
+      background: #1e2535;
+      border-radius: 10px;
+      padding: 20px 16px;
+      border-top: 3px solid;
+    }
+
+    .phase-card:nth-child(1) { border-color: #60a5fa; }
+    .phase-card:nth-child(2) { border-color: #a78bfa; }
+    .phase-card:nth-child(3) { border-color: #34d399; }
+    .phase-card:nth-child(4) { border-color: #f59e0b; }
+    .phase-card:nth-child(5) { border-color: #f87171; }
+
+    .phase-card h3 {
+      font-size: 0.85rem;
+      margin-bottom: 10px;
+      color: #f1f5f9;
+    }
+
+    .phase-card ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .phase-card ul li {
+      font-size: 0.78rem;
+      color: #94a3b8;
+      padding: 3px 0;
+      border-bottom: 1px solid #2d3748;
+    }
+
+    .phase-card ul li:last-child { border-bottom: none; }
+    .phase-card ul li::before { content: '▸ '; color: #64748b; }
+  </style>
+</head>
+<body>
+
+  <h1>SNS自動投稿システム 計画図</h1>
+  <p class="subtitle">Google Drive素材 → AI生成 → 承認 → 各SNS投稿 → 分析・最適化</p>
+
+  <!-- 全体フロー -->
+  <div class="section">
+    <div class="section-title">全体フロー</div>
+    <div class="mermaid">
+flowchart TD
+    A[/"📁 Google Drive\n素材：テキスト・画像・PDF"/]
+
+    A --> B["🤖 Claude API\n文章自動生成"]
+    A --> C["🎬 Vertex AI Veo\n動画自動生成"]
+
+    B --> D[("🗄️ Cloud Firestore\n承認待ち保存")]
+    C --> D
+
+    D --> E["🖥️ 管理画面\n担当者が確認・承認"]
+
+    E -->|承認| F["📤 各SNSへ投稿"]
+    E -->|却下| R["❌ 却下として記録"]
+
+    F --> F1["📝 WordPress\nお知らせ記事"]
+    F --> F2["👍 Facebook\nGraph API"]
+    F --> F3["📸 Instagram\nGraph API / Reels"]
+    F --> F4["🎵 TikTok\nContent Posting API"]
+
+    F1 & F2 & F3 & F4 --> G[("📊 Firestore\n分析データ収集")]
+    G --> H["🧠 Claude API\n投稿最適化・改善提案"]
+    H --> I["🖥️ 管理画面\n分析レポート表示"]
+
+    style A fill:#1e3a5f,color:#93c5fd,stroke:#3b82f6
+    style B fill:#2d1b69,color:#c4b5fd,stroke:#7c3aed
+    style C fill:#2d1b69,color:#c4b5fd,stroke:#7c3aed
+    style D fill:#064e3b,color:#6ee7b7,stroke:#10b981
+    style E fill:#1e293b,color:#e2e8f0,stroke:#475569
+    style F fill:#1e293b,color:#e2e8f0,stroke:#475569
+    style G fill:#064e3b,color:#6ee7b7,stroke:#10b981
+    style H fill:#2d1b69,color:#c4b5fd,stroke:#7c3aed
+    style I fill:#1e293b,color:#e2e8f0,stroke:#475569
+    style R fill:#450a0a,color:#fca5a5,stroke:#ef4444
+    </div>
+  </div>
+
+  <!-- フェーズ別詳細 -->
+  <div class="section">
+    <div class="section-title">フェーズ1：素材取得・文章生成・保存</div>
+    <div class="mermaid">
+flowchart LR
+    A[/"📁 Google Drive\n投稿素材フォルダ"/] --> B["テキスト取得"]
+    A --> C["画像取得"]
+    A --> D["PDF取得"]
+    D --> D1["PDF→テキスト変換"]
+    C --> C1["Claude Vision\n画像内容を解析"]
+    B & D1 & C1 --> E["🤖 Claude API\n文章生成"]
+    E --> F["WordPress記事用\nタイトル・本文・メタ"]
+    E --> G["Facebook用\n300文字以内"]
+    E --> H["Instagram用\n150文字＋ハッシュタグ"]
+    E --> I["TikTok用\n100文字キャプション"]
+    F & G & H & I --> J[("🗄️ Firestore\nstatus: pending")]
+    J --> K["📩 Slack/メール通知\n担当者へ"]
+
+    style A fill:#1e3a5f,color:#93c5fd,stroke:#3b82f6
+    style E fill:#2d1b69,color:#c4b5fd,stroke:#7c3aed
+    style J fill:#064e3b,color:#6ee7b7,stroke:#10b981
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">フェーズ2：動画自動生成</div>
+    <div class="mermaid">
+flowchart LR
+    A["📸 素材画像"] --> B["🎬 Vertex AI Veo"]
+    B --> C["TikTok用動画\n縦型 9:16"]
+    B --> D["Instagram Reels用動画\n縦型 9:16"]
+    C --> E[("☁️ Cloud Storage\n動画を保存")]
+    D --> E
+    E --> F[("🗄️ Firestore\n動画URLを紐付け")]
+
+    style B fill:#2d1b69,color:#c4b5fd,stroke:#7c3aed
+    style E fill:#1e3a5f,color:#93c5fd,stroke:#3b82f6
+    style F fill:#064e3b,color:#6ee7b7,stroke:#10b981
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">フェーズ3：管理画面</div>
+    <div class="mermaid">
+flowchart LR
+    A["👤 担当者\nGoogleログイン"] --> B["🖥️ 管理画面\nNext.js 14"]
+    B --> C["承認待ち一覧"]
+    C --> D["詳細・編集画面\n各SNS投稿文プレビュー\n動画・画像プレビュー\n投稿文の編集"]
+    D --> E{"判断"}
+    E -->|承認| F["✅ 承認\n即時投稿へ"]
+    E -->|却下| G["❌ 却下\n理由を記録"]
+    F & G --> H[("🗄️ Firestore\n承認者・日時を記録")]
+
+    style B fill:#1e293b,color:#e2e8f0,stroke:#475569
+    style H fill:#064e3b,color:#6ee7b7,stroke:#10b981
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">フェーズ4：各SNS API連携</div>
+    <div class="mermaid">
+flowchart LR
+    A["✅ 承認済み投稿"] --> B["📤 投稿処理"]
+    B --> C["📝 WordPress\nREST API\n記事公開＋画像"]
+    B --> D["👍 Facebook\nGraph API\n画像付き投稿"]
+    B --> E["📸 Instagram\nGraph API\nReels or 画像投稿"]
+    B --> F["🎵 TikTok\nContent Posting API\n動画投稿"]
+
+    style A fill:#064e3b,color:#6ee7b7,stroke:#10b981
+    style C fill:#1e3a5f,color:#93c5fd,stroke:#3b82f6
+    style D fill:#1e3a5f,color:#93c5fd,stroke:#3b82f6
+    style E fill:#1e3a5f,color:#93c5fd,stroke:#3b82f6
+    style F fill:#1e3a5f,color:#93c5fd,stroke:#3b82f6
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">フェーズ5：分析・最適化</div>
+    <div class="mermaid">
+flowchart LR
+    A["📊 各SNS\nInsights API"] --> B["Facebook\nInsights"]
+    A --> C["Instagram\nInsights"]
+    A --> D["TikTok\nAnalytics"]
+    B & C & D --> E[("🗄️ Firestore\nいいね・リーチ・エンゲージメント")]
+    E --> F["🧠 Claude API\nデータ分析"]
+    F --> G["最適投稿時間の提案"]
+    F --> H["反応が良い文章パターン抽出"]
+    F --> I["次回投稿への改善提案"]
+    G & H & I --> J["🖥️ 管理画面\nレポート・提案表示"]
+
+    style F fill:#2d1b69,color:#c4b5fd,stroke:#7c3aed
+    style E fill:#064e3b,color:#6ee7b7,stroke:#10b981
+    style J fill:#1e293b,color:#e2e8f0,stroke:#475569
+    </div>
+  </div>
+
+  <!-- フェーズカード -->
+  <div class="section">
+    <div class="section-title">フェーズ一覧</div>
+    <div class="phase-grid">
+      <div class="phase-card">
+        <h3>フェーズ1<br>素材取得・文章生成</h3>
+        <ul>
+          <li>Google Drive監視</li>
+          <li>PDF・画像解析</li>
+          <li>Claude API文章生成</li>
+          <li>Firestore保存</li>
+          <li>Slack/メール通知</li>
+        </ul>
+      </div>
+      <div class="phase-card">
+        <h3>フェーズ2<br>動画自動生成</h3>
+        <ul>
+          <li>Vertex AI Veo</li>
+          <li>TikTok用動画（9:16）</li>
+          <li>Instagram Reels用動画</li>
+          <li>Cloud Storage保存</li>
+        </ul>
+      </div>
+      <div class="phase-card">
+        <h3>フェーズ3<br>管理画面</h3>
+        <ul>
+          <li>Next.js 14</li>
+          <li>Google OAuth認証</li>
+          <li>承認待ち一覧</li>
+          <li>投稿文編集</li>
+          <li>承認・却下操作</li>
+        </ul>
+      </div>
+      <div class="phase-card">
+        <h3>フェーズ4<br>SNS API連携</h3>
+        <ul>
+          <li>WordPress REST API</li>
+          <li>Facebook Graph API</li>
+          <li>Instagram Graph API</li>
+          <li>TikTok Posting API</li>
+        </ul>
+      </div>
+      <div class="phase-card">
+        <h3>フェーズ5<br>分析・最適化</h3>
+        <ul>
+          <li>各SNS Insights収集</li>
+          <li>Firestoreに蓄積</li>
+          <li>Claude APIで分析</li>
+          <li>改善提案レポート</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
+  </script>
+</body>
+</html>
