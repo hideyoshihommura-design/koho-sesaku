@@ -381,7 +381,7 @@ graph TB
       <div class="step">
         <div class="step-num">②</div>
         <div class="step-title">素材は画像 ＋ コメント.txt</div>
-        <div class="step-desc">フォルダに画像（何枚でも可）とコメント.txtを入れる。コメントにAIへの説明・指示を自由に書く。画像なしでもOK</div>
+        <div class="step-desc">フォルダに画像（何枚でも可）とコメント.txtを入れる。画像なしでもOK</div>
       </div>
       <div class="step">
         <div class="step-num">③</div>
@@ -392,7 +392,7 @@ graph TB
 
     <div class="mermaid">
 flowchart LR
-    subgraph Queue["投稿素材_キュー/"]
+    subgraph Queue["投稿待ち/"]
         F1["📁 001_スタッフ紹介\n├ 写真.jpg\n└ コメント.txt"]
         F2["📁 002_イベント告知\n├ 写真1.jpg\n├ 写真2.jpg\n└ コメント.txt"]
         F3["📁 003_施設紹介\n└ コメント.txt\n（画像なしもOK）"]
@@ -421,6 +421,28 @@ flowchart LR
     style P2 fill:#1a2e1a,color:#86efac,stroke:#22c55e
     style P3 fill:#1a2e1a,color:#86efac,stroke:#22c55e
     style D1 fill:#1a2e2e,color:#67e8f9,stroke:#06b6d4
+    </div>
+
+    <div style="margin-top:24px">
+      <div style="font-size:0.88rem;font-weight:bold;color:#7dd3fc;margin-bottom:12px;">コメント.txt のフォーマット</div>
+      <div style="background:#0f1117;border:1px solid #334155;border-radius:8px;padding:20px;font-family:'Courier New',monospace;font-size:0.85rem;color:#e2e8f0;line-height:1.8;">
+        <span style="color:#475569">【内容】</span><br>
+        ここに投稿の内容・背景を自由に書く。<br>
+        誰の・何のための投稿か、伝えたいことなど。<br>
+        <br>
+        <span style="color:#475569">【特別な指示】（不要なら空白でOK）</span><br>
+        明るい雰囲気で。ハッシュタグは介護系を多めに。など
+      </div>
+      <div style="margin-top:12px;background:#0f1117;border:1px solid #334155;border-radius:8px;padding:20px;font-family:'Courier New',monospace;font-size:0.85rem;color:#e2e8f0;line-height:1.8;">
+        <span style="color:#64748b">↓ 記入例</span><br>
+        <br>
+        <span style="color:#475569">【内容】</span><br>
+        今月入社したスタッフの山田さんの紹介です。<br>
+        趣味はガーデニングで、利用者さんとの庭作りが得意です。<br>
+        <br>
+        <span style="color:#475569">【特別な指示】</span><br>
+        温かみのある雰囲気で。
+      </div>
     </div>
   </div>
 
