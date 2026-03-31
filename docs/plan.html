@@ -113,98 +113,6 @@
       overflow-x: auto;
     }
 
-    .drive-layout {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-    }
-
-    @media (max-width: 640px) {
-      .drive-layout { grid-template-columns: 1fr; }
-    }
-
-    .drive-box {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 10px;
-      padding: 20px;
-    }
-
-    .drive-box-title {
-      font-size: 0.82rem;
-      font-weight: bold;
-      color: #7dd3fc;
-      margin-bottom: 12px;
-      letter-spacing: 0.04em;
-    }
-
-    .drive-tree {
-      font-family: 'Courier New', monospace;
-      font-size: 0.82rem;
-      color: #94a3b8;
-      line-height: 1.8;
-      white-space: pre;
-    }
-
-    .drive-tree .folder { color: #fbbf24; }
-    .drive-tree .file   { color: #86efac; }
-    .drive-tree .done   { color: #475569; }
-    .drive-tree .comment { color: #f9a8d4; }
-
-    .rule-grid {
-      display: grid;
-      gap: 10px;
-    }
-
-    .rule-item {
-      background: #1e293b;
-      border-left: 3px solid #3b82f6;
-      border-radius: 0 8px 8px 0;
-      padding: 12px 16px;
-      display: flex;
-      gap: 14px;
-      align-items: flex-start;
-    }
-
-    .rule-num {
-      font-size: 1.1rem;
-      font-weight: bold;
-      color: #3b82f6;
-      white-space: nowrap;
-    }
-
-    .rule-title {
-      font-size: 0.88rem;
-      font-weight: bold;
-      color: #e2e8f0;
-      margin-bottom: 2px;
-    }
-
-    .rule-desc {
-      font-size: 0.8rem;
-      color: #64748b;
-      line-height: 1.5;
-    }
-
-    .comment-example {
-      background: #0f1117;
-      border: 1px solid #334155;
-      border-radius: 8px;
-      padding: 16px;
-      font-family: 'Courier New', monospace;
-      font-size: 0.82rem;
-      color: #86efac;
-      line-height: 1.7;
-      margin-top: 16px;
-    }
-
-    .comment-label {
-      font-family: 'Helvetica Neue', Arial, sans-serif;
-      font-size: 0.78rem;
-      color: #475569;
-      margin-bottom: 8px;
-    }
-
     table {
       width: 100%;
       border-collapse: collapse;
@@ -328,7 +236,7 @@
       <div class="step">
         <div class="step-num">①</div>
         <div class="step-title">素材を投入</div>
-        <div class="step-desc">担当者がGoogle Driveの専用フォルダに写真・テキスト・メモを入れる</div>
+        <div class="step-desc">担当者がGoogle Driveの専用フォルダに写真・コメント.txtを入れる</div>
       </div>
       <div class="step">
         <div class="step-num">②</div>
@@ -364,7 +272,7 @@
 
     <div class="mermaid">
 flowchart TD
-    A["① 担当者がGoogle Driveに素材を投入\n（写真・テキスト・メモ）"]
+    A["① 担当者がGoogle Driveに素材を投入\n（写真 ＋ コメント.txt）"]
     B["② Cloud Scheduler\n毎朝 9:00 自動起動"]
     C["Cloud Run\nメインアプリ"]
     D["Google Drive API\n素材を取得"]
@@ -392,22 +300,24 @@ flowchart TD
     K --> P
     K --> Q --> R
 
-    style A fill:#1e3a5f,color:#1e3a5f,stroke:#3b82f6
-    style B fill:#1e293b,color:#1e293b,stroke:#475569
-    style C fill:#1e293b,color:#1e293b,stroke:#475569
-    style D fill:#1e293b,color:#1e293b,stroke:#475569
-    style E fill:#1a2e1a,color:#1a2e1a,stroke:#22c55e
-    style F fill:#1a2e1a,color:#1a2e1a,stroke:#22c55e
-    style G fill:#1e293b,color:#1e293b,stroke:#475569
-    style H fill:#2d1a00,color:#2d1a00,stroke:#f59e0b
-    style I fill:#2d1a00,color:#2d1a00,stroke:#f59e0b
-    style K fill:#1a1a3e,color:#1a1a3e,stroke:#6366f1
-    style M fill:#1a1a3e,color:#1a1a3e,stroke:#6366f1
-    style N fill:#1a1a3e,color:#1a1a3e,stroke:#6366f1
-    style O fill:#1a1a3e,color:#1a1a3e,stroke:#6366f1
-    style P fill:#1a1a3e,color:#1a1a3e,stroke:#6366f1
-    style Q fill:#1e3a5f,color:#1e3a5f,stroke:#3b82f6
-    style R fill:#1e3a5f,color:#1e3a5f,stroke:#3b82f6
+    style A fill:#1e3a5f,color:#93c5fd,stroke:#3b82f6
+    style B fill:#1e293b,color:#94a3b8,stroke:#475569
+    style C fill:#1e293b,color:#94a3b8,stroke:#475569
+    style D fill:#1e293b,color:#94a3b8,stroke:#475569
+    style E fill:#1a2e1a,color:#86efac,stroke:#22c55e
+    style F fill:#1a2e1a,color:#86efac,stroke:#22c55e
+    style G fill:#1e293b,color:#94a3b8,stroke:#475569
+    style H fill:#2d1a00,color:#fcd34d,stroke:#f59e0b
+    style I fill:#2d1a00,color:#fcd34d,stroke:#f59e0b
+    style J fill:#1e293b,color:#e2e8f0,stroke:#94a3b8
+    style K fill:#1a1a3e,color:#a5b4fc,stroke:#6366f1
+    style L fill:#2d1a1a,color:#fca5a5,stroke:#ef4444
+    style M fill:#1a1a3e,color:#a5b4fc,stroke:#6366f1
+    style N fill:#1a1a3e,color:#a5b4fc,stroke:#6366f1
+    style O fill:#1a1a3e,color:#a5b4fc,stroke:#6366f1
+    style P fill:#1a1a3e,color:#a5b4fc,stroke:#6366f1
+    style Q fill:#1e3a5f,color:#93c5fd,stroke:#3b82f6
+    style R fill:#1e3a5f,color:#93c5fd,stroke:#3b82f6
     </div>
   </div>
 
@@ -422,7 +332,7 @@ graph TB
         FS["Firestore\n承認待ちデータ"]
         GCS["Cloud Storage\n生成動画の保存"]
         SM["Secret Manager\nAPIキー管理"]
-        VA["Vertex AI\nVeo 動画生成"]
+        VA["Vertex AI / Veo\n動画生成"]
         CL["Cloud Logging"]
     end
 
@@ -458,60 +368,59 @@ graph TB
     </div>
   </div>
 
-  <!-- Google Drive 管理方式 -->
+  <!-- Google Drive 素材管理 -->
   <div class="section">
     <div class="section-title">Google Drive 素材管理</div>
 
-    <div class="drive-layout">
-      <div class="drive-box">
-        <div class="drive-box-title">フォルダ構成</div>
-        <div class="drive-tree"><span class="folder">投稿素材_キュー/</span>
-├── <span class="folder">001_スタッフ紹介/</span>
-│   ├── <span class="file">写真.jpg</span>
-│   └── <span class="comment">コメント.txt</span>  ← AIへの指示
-├── <span class="folder">002_イベント告知/</span>
-│   ├── <span class="file">写真1.jpg</span>
-│   ├── <span class="file">写真2.jpg</span>
-│   └── <span class="comment">コメント.txt</span>
-├── <span class="folder">003_施設紹介/</span>
-│   └── <span class="comment">コメント.txt</span>  ← 画像なしもOK
-└── <span class="done">処理済み/</span>          ← 自動移動
-    └── <span class="done">001_スタッフ紹介/</span></div>
+    <div class="flow-steps">
+      <div class="step">
+        <div class="step-num">①</div>
+        <div class="step-title">フォルダ番号で順序管理</div>
+        <div class="step-desc">先頭に 001_ 002_ と番号をつける。小さい番号から順に処理。順序変更は番号を変えるだけ</div>
       </div>
-
-      <div>
-        <div class="rule-grid">
-          <div class="rule-item">
-            <div class="rule-num">①</div>
-            <div>
-              <div class="rule-title">順序はフォルダ番号で管理</div>
-              <div class="rule-desc">先頭に <code style="color:#fbbf24">001_</code> <code style="color:#fbbf24">002_</code> と番号をつける。小さい番号から順に処理される。順序を変えたいときは番号を変えるだけ</div>
-            </div>
-          </div>
-          <div class="rule-item">
-            <div class="rule-num">②</div>
-            <div>
-              <div class="rule-title">素材は画像 ＋ コメント.txt</div>
-              <div class="rule-desc">フォルダに画像（何枚でも可）と <code style="color:#f9a8d4">コメント.txt</code> を入れる。コメントにAIへの説明・指示を自由に書く。画像なしでもOK</div>
-            </div>
-          </div>
-          <div class="rule-item">
-            <div class="rule-num">③</div>
-            <div>
-              <div class="rule-title">投稿済みは自動で移動</div>
-              <div class="rule-desc">処理が完了したフォルダはシステムが <code style="color:#475569">処理済み/</code> に自動移動。過去の投稿内容はそのまま参照できる</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="comment-example">
-          <div class="comment-label">コメント.txt の書き方（例）</div>
-今月入社したスタッフの山田さんの紹介です。
-趣味はガーデニングで、利用者さんとの
-庭作りが得意。
-明るくて元気な雰囲気が伝わるような
-投稿にしてください。</div>
+      <div class="step">
+        <div class="step-num">②</div>
+        <div class="step-title">素材は画像 ＋ コメント.txt</div>
+        <div class="step-desc">フォルダに画像（何枚でも可）とコメント.txtを入れる。コメントにAIへの説明・指示を自由に書く。画像なしでもOK</div>
       </div>
+      <div class="step">
+        <div class="step-num">③</div>
+        <div class="step-title">投稿済みは自動で移動</div>
+        <div class="step-desc">処理が完了したフォルダはシステムが「処理済み/」に自動移動。過去の投稿内容はそのまま参照できる</div>
+      </div>
+    </div>
+
+    <div class="mermaid">
+flowchart LR
+    subgraph Queue["投稿素材_キュー/"]
+        F1["📁 001_スタッフ紹介\n├ 写真.jpg\n└ コメント.txt"]
+        F2["📁 002_イベント告知\n├ 写真1.jpg\n├ 写真2.jpg\n└ コメント.txt"]
+        F3["📁 003_施設紹介\n└ コメント.txt\n（画像なしもOK）"]
+    end
+
+    subgraph Process["システム処理"]
+        P1["コメント.txtを読み込み\n画像を解析"]
+        P2["Claude が\n投稿文を生成"]
+        P3["Veo が\nリール動画を生成"]
+    end
+
+    subgraph Done["処理済み/"]
+        D1["✅ 001_スタッフ紹介\n（自動移動）"]
+    end
+
+    F1 -- 当日処理 --> P1
+    F2 -- 翌日以降 --> F2
+    F3 -- 翌々日以降 --> F3
+    P1 --> P2 --> P3
+    P3 -- 完了後 --> D1
+
+    style F1 fill:#1e3a5f,color:#93c5fd,stroke:#3b82f6
+    style F2 fill:#1e293b,color:#94a3b8,stroke:#475569
+    style F3 fill:#1e293b,color:#94a3b8,stroke:#475569
+    style P1 fill:#1a2e1a,color:#86efac,stroke:#22c55e
+    style P2 fill:#1a2e1a,color:#86efac,stroke:#22c55e
+    style P3 fill:#1a2e1a,color:#86efac,stroke:#22c55e
+    style D1 fill:#1a2e2e,color:#67e8f9,stroke:#06b6d4
     </div>
   </div>
 
