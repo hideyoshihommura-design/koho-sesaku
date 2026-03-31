@@ -2,8 +2,9 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>SNS自動投稿システム 計画図</title>
-  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SNS自動投稿システム 計画図 v4.0</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -11,27 +12,50 @@
       font-family: 'Helvetica Neue', Arial, sans-serif;
       background: #0f1117;
       color: #e2e8f0;
-      padding: 40px 24px;
+      padding: 40px 24px 80px;
     }
 
     h1 {
       text-align: center;
-      font-size: 1.6rem;
+      font-size: 1.7rem;
       margin-bottom: 8px;
       color: #f8fafc;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.04em;
     }
 
     .subtitle {
       text-align: center;
       font-size: 0.9rem;
-      color: #94a3b8;
+      color: #64748b;
+      margin-bottom: 12px;
+    }
+
+    .version-badge {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
       margin-bottom: 48px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 0.78rem;
+      color: #94a3b8;
+    }
+
+    .badge.current {
+      background: #1d4ed8;
+      border-color: #3b82f6;
+      color: #bfdbfe;
     }
 
     .section {
       max-width: 1000px;
-      margin: 0 auto 56px;
+      margin: 0 auto 60px;
     }
 
     .section-title {
@@ -41,7 +65,7 @@
       border-left: 4px solid #7dd3fc;
       padding-left: 12px;
       margin-bottom: 20px;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.04em;
     }
 
     .mermaid {
@@ -51,246 +75,463 @@
       overflow-x: auto;
     }
 
-    .phase-grid {
+    .flow-steps {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 16px;
-      max-width: 1000px;
-      margin: 0 auto 56px;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
     }
 
-    .phase-card {
-      background: #1e2535;
+    .step {
+      background: #1e293b;
+      border: 1px solid #334155;
       border-radius: 10px;
-      padding: 20px 16px;
-      border-top: 3px solid;
+      padding: 16px;
     }
 
-    .phase-card:nth-child(1) { border-color: #60a5fa; }
-    .phase-card:nth-child(2) { border-color: #a78bfa; }
-    .phase-card:nth-child(3) { border-color: #34d399; }
-    .phase-card:nth-child(4) { border-color: #f59e0b; }
-    .phase-card:nth-child(5) { border-color: #f87171; }
-
-    .phase-card h3 {
-      font-size: 0.85rem;
-      margin-bottom: 10px;
-      color: #f1f5f9;
+    .step-num {
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: #3b82f6;
+      margin-bottom: 6px;
     }
 
-    .phase-card ul {
-      list-style: none;
-      padding: 0;
+    .step-title {
+      font-size: 0.88rem;
+      font-weight: bold;
+      color: #e2e8f0;
+      margin-bottom: 4px;
     }
 
-    .phase-card ul li {
+    .step-desc {
       font-size: 0.78rem;
-      color: #94a3b8;
-      padding: 3px 0;
-      border-bottom: 1px solid #2d3748;
+      color: #64748b;
+      line-height: 1.5;
     }
 
-    .phase-card ul li:last-child { border-bottom: none; }
-    .phase-card ul li::before { content: '▸ '; color: #64748b; }
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    th {
+      background: #1e293b;
+      color: #7dd3fc;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 2px solid #334155;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #1e293b;
+      color: #cbd5e1;
+      vertical-align: top;
+    }
+
+    tr:hover td { background: #1e293b44; }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: bold;
+    }
+
+    .tag-high { background: #7f1d1d; color: #fca5a5; }
+    .tag-mid  { background: #78350f; color: #fcd34d; }
+    .tag-low  { background: #1e3a5f; color: #93c5fd; }
+
+    .highlight-box {
+      background: #0c1a2e;
+      border: 1px solid #1d4ed8;
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      font-size: 0.92rem;
+      line-height: 1.8;
+      color: #bfdbfe;
+    }
+
+    .phase-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .phase {
+      background: #1e293b;
+      border-left: 4px solid #334155;
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .phase-num {
+      font-size: 0.8rem;
+      font-weight: bold;
+      white-space: nowrap;
+      color: #64748b;
+      padding-top: 2px;
+    }
+
+    .phase-name {
+      font-size: 0.9rem;
+      font-weight: bold;
+      color: #e2e8f0;
+      margin-bottom: 4px;
+    }
+
+    .phase-detail {
+      font-size: 0.8rem;
+      color: #64748b;
+      line-height: 1.6;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 0.78rem;
+      color: #334155;
+      margin-top: 60px;
+    }
   </style>
 </head>
 <body>
 
-  <h1>SNS自動投稿システム 計画図</h1>
-  <p class="subtitle">Google Drive素材 → AI生成 → 承認 → 各SNS投稿 → 分析・最適化</p>
+  <h1>SNS自動投稿システム</h1>
+  <p class="subtitle">Google Drive → AI生成 → 承認 → 全SNS自動投稿 → WordPress お知らせ更新</p>
+
+  <div class="version-badge">
+    <span class="badge">v1〜v3 2026-03-07</span>
+    <span class="badge">v4〜v7 2026-03-19</span>
+    <span class="badge current">v4.0 2026-03-31 現行</span>
+  </div>
+
+  <!-- やりたいこと -->
+  <div class="section">
+    <div class="section-title">やりたいこと</div>
+    <div class="highlight-box">
+      Google Drive の専用フォルダに素材（写真・テキストなど）を入れるだけで、<br>
+      AI が各SNS用の投稿文・画像・リール動画を自動生成。<br>
+      担当者が確認・承認したら、Facebook / Instagram / TikTok / X へ自動投稿。<br>
+      投稿後は WordPress のお知らせに下書きを自動作成する。
+    </div>
+  </div>
 
   <!-- 全体フロー -->
   <div class="section">
     <div class="section-title">全体フロー</div>
+
+    <div class="flow-steps">
+      <div class="step">
+        <div class="step-num">①</div>
+        <div class="step-title">素材を投入</div>
+        <div class="step-desc">担当者がGoogle Driveの専用フォルダに写真・テキスト・メモを入れる</div>
+      </div>
+      <div class="step">
+        <div class="step-num">②</div>
+        <div class="step-title">自動起動</div>
+        <div class="step-desc">毎朝9:00にCloud Schedulerがシステムを起動し、素材を取り込む</div>
+      </div>
+      <div class="step">
+        <div class="step-num">③</div>
+        <div class="step-title">AI生成</div>
+        <div class="step-desc">ClaudeがSNS用投稿文を生成。VeoがInstagram・TikTok用リール動画を生成</div>
+      </div>
+      <div class="step">
+        <div class="step-num">④</div>
+        <div class="step-title">確認通知</div>
+        <div class="step-desc">SlackまたはメールでAIが作ったコンテンツの確認依頼が届く</div>
+      </div>
+      <div class="step">
+        <div class="step-num">⑤</div>
+        <div class="step-title">承認</div>
+        <div class="step-desc">確認画面で内容を確認・修正し、「承認」ボタンを押す</div>
+      </div>
+      <div class="step">
+        <div class="step-num">⑥</div>
+        <div class="step-title">全SNS投稿</div>
+        <div class="step-desc">Facebook・Instagram・TikTok・X へ自動投稿される</div>
+      </div>
+      <div class="step">
+        <div class="step-num">⑦</div>
+        <div class="step-title">WP下書き作成</div>
+        <div class="step-desc">WordPressのお知らせに下書きが自動作成。担当者が仕上げて公開</div>
+      </div>
+    </div>
+
     <div class="mermaid">
 flowchart TD
-    A[/"📁 Google Drive\n素材：テキスト・画像・PDF"/]
+    A["① 担当者がGoogle Driveに素材を投入\n（写真・テキスト・メモ）"]
+    B["② Cloud Scheduler\n毎朝 9:00 自動起動"]
+    C["Cloud Run\nメインアプリ"]
+    D["Google Drive API\n素材を取得"]
+    E["③ Claude API\n各SNS用の投稿文を生成"]
+    F["Veo / Vertex AI\nリール動画を生成"]
+    G["Firestore\n承認待ちデータを保存"]
+    H["④ Slack / メール\n担当者へ確認依頼通知"]
+    I["⑤ 確認画面\n内容を確認・修正"]
+    J{"承認?"}
+    K["⑥ 全SNSへ自動投稿"]
+    L["破棄"]
+    M["Facebook\nMeta Graph API"]
+    N["Instagram\nMeta Graph API"]
+    O["TikTok\nContent Posting API"]
+    P["X（Twitter）\nX API v2"]
+    Q["⑦ WordPress REST API\nお知らせ下書きを自動作成"]
+    R["担当者が内容を仕上げて公開"]
 
-    A --> B["🤖 Claude API\n文章自動生成"]
-    A --> C["🎬 Vertex AI Veo\n動画自動生成"]
+    A --> B --> C --> D --> E --> F --> G --> H --> I --> J
+    J -- 承認 --> K
+    J -- 却下 --> L
+    K --> M
+    K --> N
+    K --> O
+    K --> P
+    K --> Q --> R
 
-    B --> D[("🗄️ Cloud Firestore\n承認待ち保存")]
-    C --> D
-
-    D --> E["🖥️ 管理画面\n担当者が確認・承認"]
-
-    E -->|承認| F["📤 各SNSへ投稿"]
-    E -->|却下| R["❌ 却下として記録"]
-
-    F --> F1["📝 WordPress\nお知らせ記事"]
-    F --> F2["👍 Facebook\nGraph API"]
-    F --> F3["📸 Instagram\nGraph API / Reels"]
-    F --> F4["🎵 TikTok\nContent Posting API"]
-
-    F1 & F2 & F3 & F4 --> G[("📊 Firestore\n分析データ収集")]
-    G --> H["🧠 Claude API\n投稿最適化・改善提案"]
-    H --> I["🖥️ 管理画面\n分析レポート表示"]
-
-    style A fill:#1e3a5f,color:#93c5fd,stroke:#3b82f6
-    style B fill:#2d1b69,color:#c4b5fd,stroke:#7c3aed
-    style C fill:#2d1b69,color:#c4b5fd,stroke:#7c3aed
-    style D fill:#064e3b,color:#6ee7b7,stroke:#10b981
-    style E fill:#1e293b,color:#e2e8f0,stroke:#475569
-    style F fill:#1e293b,color:#e2e8f0,stroke:#475569
-    style G fill:#064e3b,color:#6ee7b7,stroke:#10b981
-    style H fill:#2d1b69,color:#c4b5fd,stroke:#7c3aed
-    style I fill:#1e293b,color:#e2e8f0,stroke:#475569
-    style R fill:#450a0a,color:#fca5a5,stroke:#ef4444
+    style A fill:#1e3a5f,color:#1e3a5f,stroke:#3b82f6
+    style B fill:#1e293b,color:#1e293b,stroke:#475569
+    style C fill:#1e293b,color:#1e293b,stroke:#475569
+    style D fill:#1e293b,color:#1e293b,stroke:#475569
+    style E fill:#1a2e1a,color:#1a2e1a,stroke:#22c55e
+    style F fill:#1a2e1a,color:#1a2e1a,stroke:#22c55e
+    style G fill:#1e293b,color:#1e293b,stroke:#475569
+    style H fill:#2d1a00,color:#2d1a00,stroke:#f59e0b
+    style I fill:#2d1a00,color:#2d1a00,stroke:#f59e0b
+    style K fill:#1a1a3e,color:#1a1a3e,stroke:#6366f1
+    style M fill:#1a1a3e,color:#1a1a3e,stroke:#6366f1
+    style N fill:#1a1a3e,color:#1a1a3e,stroke:#6366f1
+    style O fill:#1a1a3e,color:#1a1a3e,stroke:#6366f1
+    style P fill:#1a1a3e,color:#1a1a3e,stroke:#6366f1
+    style Q fill:#1e3a5f,color:#1e3a5f,stroke:#3b82f6
+    style R fill:#1e3a5f,color:#1e3a5f,stroke:#3b82f6
     </div>
   </div>
 
-  <!-- フェーズ別詳細 -->
+  <!-- システム構成 -->
   <div class="section">
-    <div class="section-title">フェーズ1：素材取得・文章生成・保存</div>
+    <div class="section-title">システム構成</div>
     <div class="mermaid">
-flowchart LR
-    A[/"📁 Google Drive\n投稿素材フォルダ"/] --> B["テキスト取得"]
-    A --> C["画像取得"]
-    A --> D["PDF取得"]
-    D --> D1["PDF→テキスト変換"]
-    C --> C1["Claude Vision\n画像内容を解析"]
-    B & D1 & C1 --> E["🤖 Claude API\n文章生成"]
-    E --> F["WordPress記事用\nタイトル・本文・メタ"]
-    E --> G["Facebook用\n300文字以内"]
-    E --> H["Instagram用\n150文字＋ハッシュタグ"]
-    E --> I["TikTok用\n100文字キャプション"]
-    F & G & H & I --> J[("🗄️ Firestore\nstatus: pending")]
-    J --> K["📩 Slack/メール通知\n担当者へ"]
+graph TB
+    subgraph GCP["Google Cloud Platform"]
+        CS["Cloud Scheduler\n毎朝9:00"]
+        CR["Cloud Run\nNode.js / TypeScript"]
+        FS["Firestore\n承認待ちデータ"]
+        GCS["Cloud Storage\n生成動画の保存"]
+        SM["Secret Manager\nAPIキー管理"]
+        VA["Vertex AI\nVeo 動画生成"]
+        CL["Cloud Logging"]
+    end
 
-    style A fill:#1e3a5f,color:#93c5fd,stroke:#3b82f6
-    style E fill:#2d1b69,color:#c4b5fd,stroke:#7c3aed
-    style J fill:#064e3b,color:#6ee7b7,stroke:#10b981
+    subgraph AI["AI"]
+        CA["Claude API\n投稿文生成"]
+    end
+
+    subgraph SNS["SNS"]
+        META["Meta Graph API\nFacebook / Instagram"]
+        TT["TikTok\nContent Posting API"]
+        XA["X API v2"]
+    end
+
+    subgraph Other["その他"]
+        GD["Google Drive\n素材フォルダ"]
+        WP["WordPress\nREST API"]
+        SL["Slack / メール\n通知"]
+    end
+
+    CS --> CR
+    CR --- FS
+    CR --> GCS
+    CR --> VA
+    SM --> CR
+    CR --> CL
+    CR --> CA
+    CR --> GD
+    CR --> META
+    CR --> TT
+    CR --> XA
+    CR --> WP
+    CR --> SL
     </div>
   </div>
 
+  <!-- SNS別投稿仕様 -->
   <div class="section">
-    <div class="section-title">フェーズ2：動画自動生成</div>
-    <div class="mermaid">
-flowchart LR
-    A["📸 素材画像"] --> B["🎬 Vertex AI Veo"]
-    B --> C["TikTok用動画\n縦型 9:16"]
-    B --> D["Instagram Reels用動画\n縦型 9:16"]
-    C --> E[("☁️ Cloud Storage\n動画を保存")]
-    D --> E
-    E --> F[("🗄️ Firestore\n動画URLを紐付け")]
-
-    style B fill:#2d1b69,color:#c4b5fd,stroke:#7c3aed
-    style E fill:#1e3a5f,color:#93c5fd,stroke:#3b82f6
-    style F fill:#064e3b,color:#6ee7b7,stroke:#10b981
+    <div class="section-title">SNS別 投稿仕様</div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>SNS</th>
+            <th>API</th>
+            <th>投稿コンテンツ</th>
+            <th>文字数目安</th>
+            <th>備考</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Facebook</td>
+            <td>Meta Graph API</td>
+            <td>投稿文 ＋ 画像</td>
+            <td>〜300文字</td>
+            <td>ページ管理者権限が必要</td>
+          </tr>
+          <tr>
+            <td>Instagram</td>
+            <td>Meta Graph API</td>
+            <td>投稿文 ＋ 画像 または リール動画</td>
+            <td>〜150文字 ＋ ハッシュタグ</td>
+            <td>Facebookと同じAPIで可</td>
+          </tr>
+          <tr>
+            <td>TikTok</td>
+            <td>TikTok Content Posting API</td>
+            <td>リール動画 ＋ キャプション</td>
+            <td>〜100文字 ＋ ハッシュタグ</td>
+            <td>Business API申請が必要（審査2〜4週間）</td>
+          </tr>
+          <tr>
+            <td>X（Twitter）</td>
+            <td>X API v2</td>
+            <td>投稿文 ＋ 画像</td>
+            <td>〜140文字</td>
+            <td>有料プラン必須（Basic $100/月〜）</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
+  <!-- 実装フェーズ -->
   <div class="section">
-    <div class="section-title">フェーズ3：管理画面</div>
-    <div class="mermaid">
-flowchart LR
-    A["👤 担当者\nGoogleログイン"] --> B["🖥️ 管理画面\nNext.js 14"]
-    B --> C["承認待ち一覧"]
-    C --> D["詳細・編集画面\n各SNS投稿文プレビュー\n動画・画像プレビュー\n投稿文の編集"]
-    D --> E{"判断"}
-    E -->|承認| F["✅ 承認\n即時投稿へ"]
-    E -->|却下| G["❌ 却下\n理由を記録"]
-    F & G --> H[("🗄️ Firestore\n承認者・日時を記録")]
-
-    style B fill:#1e293b,color:#e2e8f0,stroke:#475569
-    style H fill:#064e3b,color:#6ee7b7,stroke:#10b981
+    <div class="section-title">実装フェーズ</div>
+    <div class="phase-list">
+      <div class="phase">
+        <div class="phase-num">Phase 1</div>
+        <div>
+          <div class="phase-name">GCP基盤構築（1週間）</div>
+          <div class="phase-detail">GCPプロジェクト作成・IAM設定 / 必要APIの有効化 / Secret Managerにキーを登録 / Cloud Run基本構成</div>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="phase-num">Phase 2</div>
+        <div>
+          <div class="phase-name">コア機能実装（2週間）</div>
+          <div class="phase-detail">Google Driveから素材取得 / ClaudeによるSNS投稿文生成 / Firestoreへの承認待ちデータ保存 / Slack/メール通知</div>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="phase-num">Phase 3</div>
+        <div>
+          <div class="phase-name">承認UI実装（1週間）</div>
+          <div class="phase-detail">確認画面の作成 / 承認・却下・修正の機能実装</div>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="phase-num">Phase 4</div>
+        <div>
+          <div class="phase-name">SNS投稿実装（1〜2週間）</div>
+          <div class="phase-detail">Facebook・Instagram（Meta Graph API） / X（Twitter API v2） / TikTok（Content Posting API）</div>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="phase-num">Phase 5</div>
+        <div>
+          <div class="phase-name">動画生成実装（1〜2週間）</div>
+          <div class="phase-detail">VeoによるリールAI動画生成 / Cloud Storageへの保存・管理</div>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="phase-num">Phase 6</div>
+        <div>
+          <div class="phase-name">WordPress連携（1週間）</div>
+          <div class="phase-detail">SNS投稿後にWordPressのお知らせへ下書きを自動作成</div>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="phase-num">Phase 7</div>
+        <div>
+          <div class="phase-name">テスト・調整（1〜2週間）</div>
+          <div class="phase-detail">全体通しテスト / プロンプト調整 / 本番運用開始</div>
+        </div>
+      </div>
     </div>
   </div>
 
+  <!-- 未決定事項 -->
   <div class="section">
-    <div class="section-title">フェーズ4：各SNS API連携</div>
-    <div class="mermaid">
-flowchart LR
-    A["✅ 承認済み投稿"] --> B["📤 投稿処理"]
-    B --> C["📝 WordPress\nREST API\n記事公開＋画像"]
-    B --> D["👍 Facebook\nGraph API\n画像付き投稿"]
-    B --> E["📸 Instagram\nGraph API\nReels or 画像投稿"]
-    B --> F["🎵 TikTok\nContent Posting API\n動画投稿"]
-
-    style A fill:#064e3b,color:#6ee7b7,stroke:#10b981
-    style C fill:#1e3a5f,color:#93c5fd,stroke:#3b82f6
-    style D fill:#1e3a5f,color:#93c5fd,stroke:#3b82f6
-    style E fill:#1e3a5f,color:#93c5fd,stroke:#3b82f6
-    style F fill:#1e3a5f,color:#93c5fd,stroke:#3b82f6
+    <div class="section-title">未決定事項</div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>項目</th>
+            <th>内容</th>
+            <th>優先度</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>通知方法</td>
+            <td>SlackかメールかLINEか</td>
+            <td><span class="tag tag-high">高</span></td>
+          </tr>
+          <tr>
+            <td>TikTok API申請</td>
+            <td>Business API の申請（審査2〜4週間）</td>
+            <td><span class="tag tag-high">高</span></td>
+          </tr>
+          <tr>
+            <td>X API プラン</td>
+            <td>Basic（$100/月）以上が必要か確認</td>
+            <td><span class="tag tag-high">高</span></td>
+          </tr>
+          <tr>
+            <td>Meta API設定</td>
+            <td>FacebookページのAPI権限設定</td>
+            <td><span class="tag tag-high">高</span></td>
+          </tr>
+          <tr>
+            <td>投稿プロンプト</td>
+            <td>各SNSの文体・トーン・禁止事項の定義</td>
+            <td><span class="tag tag-mid">中</span></td>
+          </tr>
+          <tr>
+            <td>動画スタイル</td>
+            <td>Veoに指示するリール動画のスタイル</td>
+            <td><span class="tag tag-mid">中</span></td>
+          </tr>
+          <tr>
+            <td>承認UIデザイン</td>
+            <td>確認画面のUIデザイン</td>
+            <td><span class="tag tag-low">低</span></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
-  <div class="section">
-    <div class="section-title">フェーズ5：分析・最適化</div>
-    <div class="mermaid">
-flowchart LR
-    A["📊 各SNS\nInsights API"] --> B["Facebook\nInsights"]
-    A --> C["Instagram\nInsights"]
-    A --> D["TikTok\nAnalytics"]
-    B & C & D --> E[("🗄️ Firestore\nいいね・リーチ・エンゲージメント")]
-    E --> F["🧠 Claude API\nデータ分析"]
-    F --> G["最適投稿時間の提案"]
-    F --> H["反応が良い文章パターン抽出"]
-    F --> I["次回投稿への改善提案"]
-    G & H & I --> J["🖥️ 管理画面\nレポート・提案表示"]
-
-    style F fill:#2d1b69,color:#c4b5fd,stroke:#7c3aed
-    style E fill:#064e3b,color:#6ee7b7,stroke:#10b981
-    style J fill:#1e293b,color:#e2e8f0,stroke:#475569
-    </div>
-  </div>
-
-  <!-- フェーズカード -->
-  <div class="section">
-    <div class="section-title">フェーズ一覧</div>
-    <div class="phase-grid">
-      <div class="phase-card">
-        <h3>フェーズ1<br>素材取得・文章生成</h3>
-        <ul>
-          <li>Google Drive監視</li>
-          <li>PDF・画像解析</li>
-          <li>Claude API文章生成</li>
-          <li>Firestore保存</li>
-          <li>Slack/メール通知</li>
-        </ul>
-      </div>
-      <div class="phase-card">
-        <h3>フェーズ2<br>動画自動生成</h3>
-        <ul>
-          <li>Vertex AI Veo</li>
-          <li>TikTok用動画（9:16）</li>
-          <li>Instagram Reels用動画</li>
-          <li>Cloud Storage保存</li>
-        </ul>
-      </div>
-      <div class="phase-card">
-        <h3>フェーズ3<br>管理画面</h3>
-        <ul>
-          <li>Next.js 14</li>
-          <li>Google OAuth認証</li>
-          <li>承認待ち一覧</li>
-          <li>投稿文編集</li>
-          <li>承認・却下操作</li>
-        </ul>
-      </div>
-      <div class="phase-card">
-        <h3>フェーズ4<br>SNS API連携</h3>
-        <ul>
-          <li>WordPress REST API</li>
-          <li>Facebook Graph API</li>
-          <li>Instagram Graph API</li>
-          <li>TikTok Posting API</li>
-        </ul>
-      </div>
-      <div class="phase-card">
-        <h3>フェーズ5<br>分析・最適化</h3>
-        <ul>
-          <li>各SNS Insights収集</li>
-          <li>Firestoreに蓄積</li>
-          <li>Claude APIで分析</li>
-          <li>改善提案レポート</li>
-        </ul>
-      </div>
-    </div>
-  </div>
+  <footer>
+    SNS自動投稿システム 計画図 v4.0 — 最終更新: 2026-03-31
+  </footer>
 
   <script>
-    mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+      flowchart: { curve: 'basis', useMaxWidth: true },
+    });
   </script>
 </body>
 </html>
