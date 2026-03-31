@@ -575,6 +575,63 @@ flowchart LR
     </div>
   </div>
 
+  <!-- 生成物の管理・承認フロー -->
+  <div class="section">
+    <div class="section-title">生成物の管理・承認フロー</div>
+
+    <div class="mermaid">
+flowchart TD
+    A["AI生成完了\n投稿文・動画"]
+    B["Googleスプレッドシートに\n自動書き出し\n投稿文・動画URL・生成日時"]
+    C["Google Chat Bot が通知\n「確認してください」\n＋ スプシのリンク"]
+    D["承認ボタン\n却下ボタン"]
+    E["担当者がスプレッドシートで\n内容を確認・修正"]
+    F["Google Chatで\n「承認」ボタンを押す"]
+    G["全SNSへ自動投稿"]
+    H["スプレッドシートに\n投稿日時・ステータスを記録"]
+    I["却下\n→ 破棄"]
+
+    A --> B --> C --> D
+    D --> E --> F --> G --> H
+    D --> I
+
+    style A fill:#1a2e1a,color:#86efac,stroke:#22c55e
+    style B fill:#1e3a2e,color:#6ee7b7,stroke:#10b981
+    style C fill:#2d1a00,color:#fcd34d,stroke:#f59e0b
+    style D fill:#1e293b,color:#e2e8f0,stroke:#94a3b8
+    style E fill:#2d1a00,color:#fcd34d,stroke:#f59e0b
+    style F fill:#2d1a00,color:#fcd34d,stroke:#f59e0b
+    style G fill:#1a1a3e,color:#a5b4fc,stroke:#6366f1
+    style H fill:#1e3a2e,color:#6ee7b7,stroke:#10b981
+    style I fill:#2d1a1a,color:#fca5a5,stroke:#ef4444
+    </div>
+
+    <div style="margin-top:24px">
+      <div style="font-size:0.88rem;font-weight:bold;color:#7dd3fc;margin-bottom:12px;">スプレッドシートの項目</div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>列</th>
+              <th>内容</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>生成日時</td><td>いつ生成されたか</td></tr>
+            <tr><td>素材フォルダ名</td><td>どの素材から生成したか（例：001_スタッフ紹介）</td></tr>
+            <tr><td>Facebook投稿文</td><td>生成されたテキスト（修正可）</td></tr>
+            <tr><td>Instagram投稿文</td><td>生成されたテキスト（修正可）</td></tr>
+            <tr><td>TikTok投稿文</td><td>生成されたテキスト（修正可）</td></tr>
+            <tr><td>X投稿文</td><td>生成されたテキスト（修正可）</td></tr>
+            <tr><td>動画URL</td><td>Cloud StorageのURL（クリックで確認）</td></tr>
+            <tr><td>ステータス</td><td>承認済み／却下／投稿済み</td></tr>
+            <tr><td>投稿日時</td><td>実際に投稿された日時（自動記録）</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <!-- 実装フェーズ -->
   <div class="section">
     <div class="section-title">実装フェーズ</div>
@@ -590,14 +647,14 @@ flowchart LR
         <div class="phase-num">Phase 2</div>
         <div>
           <div class="phase-name">コア機能実装（2週間）</div>
-          <div class="phase-detail">Google Driveから素材取得 / ClaudeによるSNS投稿文生成 / Firestoreへの承認待ちデータ保存 / Slack/メール通知</div>
+          <div class="phase-detail">Google Driveから素材取得 / ClaudeによるSNS投稿文生成（draft-contentスキルベース） / SNS別プロンプトのチューニング / Googleスプレッドシートへの自動書き出し / Cloud Storageへの動画保存・URL管理</div>
         </div>
       </div>
       <div class="phase">
         <div class="phase-num">Phase 3</div>
         <div>
-          <div class="phase-name">承認UI実装（1週間）</div>
-          <div class="phase-detail">確認画面の作成 / 承認・却下・修正の機能実装</div>
+          <div class="phase-name">Google Chat Bot・承認フロー実装（1週間）</div>
+          <div class="phase-detail">Google Chat Bot の作成 / 生成完了通知（スプレッドシートリンク付き） / 「承認」「却下」ボタンの実装 / 承認後の自動投稿トリガー</div>
         </div>
       </div>
       <div class="phase">
