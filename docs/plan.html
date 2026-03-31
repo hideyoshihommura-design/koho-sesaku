@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SNS自動投稿システム 計画図 v4.0</title>
+  <title>SNS自動投稿システム 計画図 v4.1</title>
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -113,6 +113,98 @@
       overflow-x: auto;
     }
 
+    .drive-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 640px) {
+      .drive-layout { grid-template-columns: 1fr; }
+    }
+
+    .drive-box {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 20px;
+    }
+
+    .drive-box-title {
+      font-size: 0.82rem;
+      font-weight: bold;
+      color: #7dd3fc;
+      margin-bottom: 12px;
+      letter-spacing: 0.04em;
+    }
+
+    .drive-tree {
+      font-family: 'Courier New', monospace;
+      font-size: 0.82rem;
+      color: #94a3b8;
+      line-height: 1.8;
+      white-space: pre;
+    }
+
+    .drive-tree .folder { color: #fbbf24; }
+    .drive-tree .file   { color: #86efac; }
+    .drive-tree .done   { color: #475569; }
+    .drive-tree .comment { color: #f9a8d4; }
+
+    .rule-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .rule-item {
+      background: #1e293b;
+      border-left: 3px solid #3b82f6;
+      border-radius: 0 8px 8px 0;
+      padding: 12px 16px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .rule-num {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #3b82f6;
+      white-space: nowrap;
+    }
+
+    .rule-title {
+      font-size: 0.88rem;
+      font-weight: bold;
+      color: #e2e8f0;
+      margin-bottom: 2px;
+    }
+
+    .rule-desc {
+      font-size: 0.8rem;
+      color: #64748b;
+      line-height: 1.5;
+    }
+
+    .comment-example {
+      background: #0f1117;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.82rem;
+      color: #86efac;
+      line-height: 1.7;
+      margin-top: 16px;
+    }
+
+    .comment-label {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 0.78rem;
+      color: #475569;
+      margin-bottom: 8px;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -213,7 +305,8 @@
   <div class="version-badge">
     <span class="badge">v1〜v3 2026-03-07</span>
     <span class="badge">v4〜v7 2026-03-19</span>
-    <span class="badge current">v4.0 2026-03-31 現行</span>
+    <span class="badge">v4.0 2026-03-31</span>
+    <span class="badge current">v4.1 2026-03-31 現行</span>
   </div>
 
   <!-- やりたいこと -->
@@ -362,6 +455,63 @@ graph TB
     CR --> XA
     CR --> WP
     CR --> SL
+    </div>
+  </div>
+
+  <!-- Google Drive 管理方式 -->
+  <div class="section">
+    <div class="section-title">Google Drive 素材管理</div>
+
+    <div class="drive-layout">
+      <div class="drive-box">
+        <div class="drive-box-title">フォルダ構成</div>
+        <div class="drive-tree"><span class="folder">投稿素材_キュー/</span>
+├── <span class="folder">001_スタッフ紹介/</span>
+│   ├── <span class="file">写真.jpg</span>
+│   └── <span class="comment">コメント.txt</span>  ← AIへの指示
+├── <span class="folder">002_イベント告知/</span>
+│   ├── <span class="file">写真1.jpg</span>
+│   ├── <span class="file">写真2.jpg</span>
+│   └── <span class="comment">コメント.txt</span>
+├── <span class="folder">003_施設紹介/</span>
+│   └── <span class="comment">コメント.txt</span>  ← 画像なしもOK
+└── <span class="done">処理済み/</span>          ← 自動移動
+    └── <span class="done">001_スタッフ紹介/</span></div>
+      </div>
+
+      <div>
+        <div class="rule-grid">
+          <div class="rule-item">
+            <div class="rule-num">①</div>
+            <div>
+              <div class="rule-title">順序はフォルダ番号で管理</div>
+              <div class="rule-desc">先頭に <code style="color:#fbbf24">001_</code> <code style="color:#fbbf24">002_</code> と番号をつける。小さい番号から順に処理される。順序を変えたいときは番号を変えるだけ</div>
+            </div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-num">②</div>
+            <div>
+              <div class="rule-title">素材は画像 ＋ コメント.txt</div>
+              <div class="rule-desc">フォルダに画像（何枚でも可）と <code style="color:#f9a8d4">コメント.txt</code> を入れる。コメントにAIへの説明・指示を自由に書く。画像なしでもOK</div>
+            </div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-num">③</div>
+            <div>
+              <div class="rule-title">投稿済みは自動で移動</div>
+              <div class="rule-desc">処理が完了したフォルダはシステムが <code style="color:#475569">処理済み/</code> に自動移動。過去の投稿内容はそのまま参照できる</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="comment-example">
+          <div class="comment-label">コメント.txt の書き方（例）</div>
+今月入社したスタッフの山田さんの紹介です。
+趣味はガーデニングで、利用者さんとの
+庭作りが得意。
+明るくて元気な雰囲気が伝わるような
+投稿にしてください。</div>
+      </div>
     </div>
   </div>
 
@@ -523,7 +673,7 @@ graph TB
   </div>
 
   <footer>
-    SNS自動投稿システム 計画図 v4.0 — 最終更新: 2026-03-31
+    SNS自動投稿システム 計画図 v4.1 — 最終更新: 2026-03-31
   </footer>
 
   <script>
