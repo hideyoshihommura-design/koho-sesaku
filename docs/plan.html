@@ -446,6 +446,87 @@ flowchart LR
     </div>
   </div>
 
+  <!-- SNS投稿文生成プロンプト -->
+  <div class="section">
+    <div class="section-title">SNS投稿文生成プロンプト設計</div>
+    <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:20px;">
+      <code style="background:#1e293b;padding:2px 8px;border-radius:4px;color:#7dd3fc;">draft-content</code> スキルの構造をベースに、Cloud Runアプリ用のプロンプトを設計する。
+    </div>
+
+    <div class="mermaid">
+flowchart LR
+    A["コメント.txt\n担当者の説明・指示"]
+    B["画像解析結果\nClaudeが画像を説明"]
+    C["Claude API\nプロンプトに組み込み"]
+    D["Facebook投稿文\n300文字以内\n絵文字・CTA・ハッシュタグ"]
+    E["Instagram投稿文\n150文字以内\n絵文字・ハッシュタグ多め"]
+    F["TikTokキャプション\n100文字以内\nシンプル・インパクト重視"]
+    G["X投稿文\n140文字以内\n簡潔・絵文字"]
+
+    A --> C
+    B --> C
+    C --> D
+    C --> E
+    C --> F
+    C --> G
+
+    style A fill:#1e3a5f,color:#93c5fd,stroke:#3b82f6
+    style B fill:#1e3a5f,color:#93c5fd,stroke:#3b82f6
+    style C fill:#1a2e1a,color:#86efac,stroke:#22c55e
+    style D fill:#1a1a3e,color:#a5b4fc,stroke:#6366f1
+    style E fill:#1a1a3e,color:#a5b4fc,stroke:#6366f1
+    style F fill:#1a1a3e,color:#a5b4fc,stroke:#6366f1
+    style G fill:#1a1a3e,color:#a5b4fc,stroke:#6366f1
+    </div>
+
+    <div style="margin-top:24px">
+      <div style="font-size:0.88rem;font-weight:bold;color:#7dd3fc;margin-bottom:12px;">SNS別 生成ルール</div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>SNS</th>
+              <th>文字数</th>
+              <th>絵文字</th>
+              <th>ハッシュタグ</th>
+              <th>特徴</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Facebook</td>
+              <td>〜300文字</td>
+              <td>あり</td>
+              <td>3〜5個</td>
+              <td>最後に問い合わせCTAを入れる</td>
+            </tr>
+            <tr>
+              <td>Instagram</td>
+              <td>〜150文字</td>
+              <td>あり</td>
+              <td>5〜10個</td>
+              <td>ビジュアル重視の書き出し</td>
+            </tr>
+            <tr>
+              <td>TikTok</td>
+              <td>〜100文字</td>
+              <td>なし</td>
+              <td>3〜5個</td>
+              <td>短くインパクト重視</td>
+            </tr>
+            <tr>
+              <td>X</td>
+              <td>〜140文字</td>
+              <td>あり</td>
+              <td>2〜3個</td>
+              <td>簡潔・リンクを想定</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <!-- SNS別投稿仕様 -->
   <div class="section">
     <div class="section-title">SNS別 投稿仕様</div>
