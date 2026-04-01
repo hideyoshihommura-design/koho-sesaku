@@ -82,15 +82,16 @@ echo "【3/6】Google Chat 通知用 Incoming Webhook URL（必須）"
 echo "  Google Chat のスペースで設定 → アプリと統合 → Webhook"
 register_secret "chat-webhook-url" "Webhook URLを入力:" false
 
-echo "【4/6】Google Sheets ID（必須）"
-echo "  スプレッドシートのURLの /d/ と /edit の間の文字列"
-echo "  例: https://docs.google.com/spreadsheets/d/[ここ]/edit"
-register_secret "sheets-id" "Sheets IDを入力:" false
-
-echo "【5/6】Google Drive フォルダID（必須）"
+echo "【4/6】Google Drive フォルダID（必須）"
 echo "  素材を保存するフォルダのURL末尾の文字列"
 echo "  例: https://drive.google.com/drive/folders/[ここ]"
 register_secret "drive-folder-id" "DriveフォルダIDを入力:" false
+
+echo "【5/6】Webアプリの秘密パス（必須）"
+echo "  承認ダッシュボードのURLの一部になります（英数字16文字以上推奨）"
+SUGGESTED_PATH=$(openssl rand -hex 12 2>/dev/null || echo "ランダム文字列を入力してください")
+echo "  例: $SUGGESTED_PATH"
+register_secret "app-secret-path" "秘密パスを入力:" true
 
 echo "【6/6】Cloud Scheduler 認証トークン（必須）"
 echo "  任意の文字列（英数字32文字以上推奨）を設定してください"

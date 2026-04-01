@@ -1,18 +1,23 @@
 // Cloud Scheduler から呼ばれる処理パイプライン
-// 18:00 と 23:00 に実行: Drive から未処理素材を取得 → Claude 生成 → Sheets 書き込み → Chat 通知
+// 18:00 と 23:00 に実行: Drive から未処理素材を取得 → Claude 生成 → Firestore 保存 → Chat 通知
 
 import { Request, Response } from 'express';
 import { logger } from '../utils/logger';
 import { listUnprocessedMaterials, downloadImagesAsBase64, markAsProcessed } from './driveHandler';
 import { generateSnsPost } from './snsGenerateHandler';
-import { appendToSheets, countPendingRows, getNextRowNumber } from './sheetsHandler';
+import { saveMaterial, countPendingMaterials } from './firestoreHandler';
 import { notifyProcessingComplete, notifyPendingReminder, notifyError } from '../utils/notify';
 import { getSecret, SECRET_NAMES } from '../utils/secretManager';
 
+// Cloud Run のサービス URL + 秘密パスを組み立て
+async function getAppUrl(): Promise<string> {
+  const serviceUrl = process.env.CLOUD_RUN_URL || `https://sns-auto-post-${process.env.GOOGLE_CLOUD_PROJECT}.a.run.app`;
+  const secretPath = await getSecret(SECRET_NAMES.APP_SECRET_PATH);
+  return `${serviceUrl}/app/${secretPath}`;
+}
+
 // Cloud Scheduler からのリクエスト認証チェック
 async function validateSchedulerRequest(req: Request): Promise<boolean> {
-  // Cloud Scheduler は OIDC トークンを付与するが、
-  // 追加の共有シークレットでも検証する（多重防衛）
   const authHeader = req.headers['authorization'] || '';
   const xSchedulerToken = req.headers['x-scheduler-token'] as string | undefined;
 
@@ -21,8 +26,7 @@ async function validateSchedulerRequest(req: Request): Promise<boolean> {
     return xSchedulerToken === expectedToken;
   }
 
-  // Cloud Run の組み込み OIDC 検証を通過している前提（Cloud Run IAM で保護）
-  // ヘッダーがあれば通過（Cloud Scheduler は Bearer トークンを付与）
+  // Cloud Run の OIDC 検証（Cloud Scheduler は Bearer トークンを付与）
   return authHeader.startsWith('Bearer ');
 }
 
@@ -55,10 +59,7 @@ async function processAllMaterials(): Promise<void> {
 
   logger.info('処理開始', { totalCount: materials.length });
 
-  const sheetsId = await getSecret(SECRET_NAMES.SHEETS_ID);
   let successCount = 0;
-  // スプレッドシートの現在の最終行番号から開始
-  let rowNumber = await getNextRowNumber(sheetsId);
 
   for (const material of materials) {
     try {
@@ -72,11 +73,10 @@ async function processAllMaterials(): Promise<void> {
       // Claude で投稿文生成
       const generated = await generateSnsPost(material, images);
 
-      // Sheets に書き込み
-      await appendToSheets(material, generated, rowNumber);
-      rowNumber++;
+      // Firestore に保存
+      await saveMaterial(material, generated);
 
-      // 処理済みにマーク
+      // Drive の素材を処理済みにマーク
       await markAsProcessed(material.materialId);
 
       successCount++;
@@ -93,7 +93,8 @@ async function processAllMaterials(): Promise<void> {
 
   // 処理完了通知（1件以上成功した場合）
   if (successCount > 0) {
-    await notifyProcessingComplete(sheetsId, successCount);
+    const appUrl = await getAppUrl();
+    await notifyProcessingComplete(appUrl, successCount);
     logger.info('処理パイプライン完了', { successCount, total: materials.length });
   }
 }
@@ -109,11 +110,11 @@ export async function handleReminder(req: Request, res: Response): Promise<void>
   logger.info('リマインダーチェック開始');
 
   try {
-    const pendingCount = await countPendingRows();
+    const pendingCount = await countPendingMaterials();
 
     if (pendingCount > 0) {
-      const sheetsId = await getSecret(SECRET_NAMES.SHEETS_ID);
-      await notifyPendingReminder(sheetsId, pendingCount);
+      const appUrl = await getAppUrl();
+      await notifyPendingReminder(appUrl, pendingCount);
     } else {
       logger.info('未承認の素材なし');
     }

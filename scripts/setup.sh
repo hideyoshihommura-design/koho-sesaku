@@ -32,8 +32,8 @@ gcloud services enable \
   run.googleapis.com \
   cloudscheduler.googleapis.com \
   secretmanager.googleapis.com \
+  firestore.googleapis.com \
   drive.googleapis.com \
-  sheets.googleapis.com \
   chat.googleapis.com \
   artifactregistry.googleapis.com \
   cloudbuild.googleapis.com \
@@ -63,6 +63,7 @@ gcloud iam service-accounts create "$SA_NAME" \
 
 for ROLE in \
   roles/secretmanager.secretAccessor \
+  roles/datastore.user \
   roles/logging.logWriter; do
   gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --member="serviceAccount:${SA_EMAIL}" \

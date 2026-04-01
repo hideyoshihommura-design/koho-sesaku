@@ -4,19 +4,18 @@ import axios from 'axios';
 import { logger } from './logger';
 import { getSecret, SECRET_NAMES } from './secretManager';
 
-// スプレッドシートへのリンク付き通知（処理完了時）
+// Webアプリへのリンク付き通知（処理完了時）
 export async function notifyProcessingComplete(
-  sheetsId: string,
+  appUrl: string,
   itemCount: number
 ): Promise<void> {
   const webhookUrl = await getSecret(SECRET_NAMES.CHAT_WEBHOOK_URL);
-  const sheetsUrl = `https://docs.google.com/spreadsheets/d/${sheetsId}`;
 
   const message = {
     text: `✅ *SNS投稿文の生成が完了しました*\n\n` +
       `件数: ${itemCount}件\n` +
-      `スプレッドシートで内容を確認し、承認してください。\n` +
-      `👉 ${sheetsUrl}`,
+      `以下のURLから内容を確認し、承認してください。\n` +
+      `👉 ${appUrl}`,
   };
 
   await axios.post(webhookUrl, message);
@@ -25,17 +24,15 @@ export async function notifyProcessingComplete(
 
 // 3日未承認リマインダー通知
 export async function notifyPendingReminder(
-  sheetsId: string,
+  appUrl: string,
   pendingCount: number
 ): Promise<void> {
   const webhookUrl = await getSecret(SECRET_NAMES.CHAT_WEBHOOK_URL);
-  const sheetsUrl = `https://docs.google.com/spreadsheets/d/${sheetsId}`;
 
   const message = {
     text: `⏰ *未承認の投稿文があります*\n\n` +
       `${pendingCount}件の投稿文が3日以上承認されていません。\n` +
-      `スプレッドシートをご確認ください。\n` +
-      `👉 ${sheetsUrl}`,
+      `👉 ${appUrl}`,
   };
 
   await axios.post(webhookUrl, message);
