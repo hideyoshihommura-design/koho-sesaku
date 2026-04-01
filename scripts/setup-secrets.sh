@@ -1,18 +1,18 @@
 #!/bin/bash
 # ─────────────────────────────────────────────────────────────
-# Secret Manager 登録スクリプト（個別追加・更新用）
+# Secret Manager 登録スクリプト（Phase A 用）
 # 使い方: bash scripts/setup-secrets.sh
 # ─────────────────────────────────────────────────────────────
 set -e
 
 echo "========================================"
-echo " Secret Manager 登録スクリプト"
+echo " Secret Manager 登録スクリプト (Phase A)"
 echo "========================================"
 
 PROJECT_ID=$(gcloud config get-value project 2>/dev/null)
 if [ -z "$PROJECT_ID" ]; then
   echo "❌ GCPプロジェクトが設定されていません"
-  echo "  実行してください: gcloud config set project aozora-sns-auto"
+  echo "  実行してください: gcloud config set project ozora-sns-auto"
   exit 1
 fi
 echo "✅ プロジェクト: $PROJECT_ID"
@@ -52,19 +52,54 @@ register_secret() {
   echo ""
 }
 
-echo "【1/3】HubSpot プライベートアプリトークン（必須）"
-echo "  取得場所: HubSpot → 設定 → 連携 → 非公開アプリ"
-register_secret "hubspot-access-token" "トークンを入力 (pat-na2-xxx):" true
+echo "【1/6】Anthropic APIキー（必須）"
+echo "  取得場所: https://console.anthropic.com → API Keys"
+register_secret "anthropic-api-key" "APIキーを入力 (sk-ant-xxx):" true
 
-echo "【2/3】WordPress アプリケーションパスワード（フローAで必要）"
-echo "  取得場所: WordPress管理画面 → ユーザー → プロフィール → アプリケーションパスワード"
-echo "  フローBのみ使う場合はそのままEnterでスキップ"
-register_secret "wordpress-app-password" "パスワードを入力（スキップ可）:" true
+echo "【2/6】Google サービスアカウント JSON（必須）"
+echo "  Google Cloud Console → IAM → サービスアカウント → キー → JSONで作成"
+echo "  Drive / Sheets 両方のアクセス権を付与してください"
+echo "  ファイルパスを入力してください（例: ~/Downloads/sa-key.json）:"
+read -r SA_FILE_PATH
+SA_FILE_PATH="${SA_FILE_PATH/#\~/$HOME}"
+if [ -f "$SA_FILE_PATH" ]; then
+  if gcloud secrets describe "google-service-account" --project="$PROJECT_ID" &>/dev/null; then
+    gcloud secrets versions add "google-service-account" \
+      --project="$PROJECT_ID" --data-file="$SA_FILE_PATH"
+  else
+    gcloud secrets create "google-service-account" \
+      --project="$PROJECT_ID" \
+      --data-file="$SA_FILE_PATH" \
+      --replication-policy="automatic"
+  fi
+  echo "✅ 登録完了: google-service-account"
+else
+  echo "⚠ ファイルが見つかりません。スキップしました。"
+fi
+echo ""
 
-echo "【3/3】SendGrid APIキー（メール通知用・任意）"
-echo "  Slack通知を使う場合は不要です。スキップ可。"
-register_secret "sendgrid-api-key" "APIキーを入力（スキップ可）:" true
+echo "【3/6】Google Chat 通知用 Incoming Webhook URL（必須）"
+echo "  Google Chat のスペースで設定 → アプリと統合 → Webhook"
+register_secret "chat-webhook-url" "Webhook URLを入力:" false
+
+echo "【4/6】Google Sheets ID（必須）"
+echo "  スプレッドシートのURLの /d/ と /edit の間の文字列"
+echo "  例: https://docs.google.com/spreadsheets/d/[ここ]/edit"
+register_secret "sheets-id" "Sheets IDを入力:" false
+
+echo "【5/6】Google Drive フォルダID（必須）"
+echo "  素材を保存するフォルダのURL末尾の文字列"
+echo "  例: https://drive.google.com/drive/folders/[ここ]"
+register_secret "drive-folder-id" "DriveフォルダIDを入力:" false
+
+echo "【6/6】Cloud Scheduler 認証トークン（必須）"
+echo "  任意の文字列（英数字32文字以上推奨）を設定してください"
+echo "  例: openssl rand -hex 32 で生成した文字列"
+register_secret "scheduler-secret" "トークンを入力:" true
 
 echo "========================================"
 echo " ✅ Secret Manager の登録が完了しました"
 echo "========================================"
+echo ""
+echo "次のステップ: Cloud Run を再デプロイしてシークレットを反映"
+echo "  bash scripts/setup.sh"

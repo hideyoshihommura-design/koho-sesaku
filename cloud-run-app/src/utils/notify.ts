@@ -1,145 +1,56 @@
-// 通知ユーティリティ
-// Slack Webhook と メール（SendGrid）に対応
-// 環境変数で有効/無効を切り替え可能
+// Google Chat Incoming Webhook による通知ユーティリティ
 
 import axios from 'axios';
 import { logger } from './logger';
+import { getSecret, SECRET_NAMES } from './secretManager';
 
-const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-const NOTIFY_EMAIL_TO = process.env.NOTIFY_EMAIL_TO;
-const NOTIFY_EMAIL_FROM = process.env.NOTIFY_EMAIL_FROM || 'noreply@your-domain.com';
+// スプレッドシートへのリンク付き通知（処理完了時）
+export async function notifyProcessingComplete(
+  sheetsId: string,
+  itemCount: number
+): Promise<void> {
+  const webhookUrl = await getSecret(SECRET_NAMES.CHAT_WEBHOOK_URL);
+  const sheetsUrl = `https://docs.google.com/spreadsheets/d/${sheetsId}`;
 
-export type NotifyLevel = 'info' | 'warning' | 'error';
+  const message = {
+    text: `✅ *SNS投稿文の生成が完了しました*\n\n` +
+      `件数: ${itemCount}件\n` +
+      `スプレッドシートで内容を確認し、承認してください。\n` +
+      `👉 ${sheetsUrl}`,
+  };
 
-export interface NotifyMessage {
-  level: NotifyLevel;
-  title: string;
-  body: string;
-  flow?: 'A' | 'B';
+  await axios.post(webhookUrl, message);
+  logger.info('処理完了通知を送信しました', { itemCount });
 }
 
-// 通知を送信（Slack & メール 両方に送る）
-export async function notify(message: NotifyMessage): Promise<void> {
-  const tasks: Promise<void>[] = [];
+// 3日未承認リマインダー通知
+export async function notifyPendingReminder(
+  sheetsId: string,
+  pendingCount: number
+): Promise<void> {
+  const webhookUrl = await getSecret(SECRET_NAMES.CHAT_WEBHOOK_URL);
+  const sheetsUrl = `https://docs.google.com/spreadsheets/d/${sheetsId}`;
 
-  if (SLACK_WEBHOOK_URL) {
-    tasks.push(notifySlack(message).catch(e =>
-      logger.warn('Slack通知失敗', { error: String(e) })
-    ));
+  const message = {
+    text: `⏰ *未承認の投稿文があります*\n\n` +
+      `${pendingCount}件の投稿文が3日以上承認されていません。\n` +
+      `スプレッドシートをご確認ください。\n` +
+      `👉 ${sheetsUrl}`,
+  };
+
+  await axios.post(webhookUrl, message);
+  logger.info('リマインダー通知を送信しました', { pendingCount });
+}
+
+// エラー通知
+export async function notifyError(message: string): Promise<void> {
+  try {
+    const webhookUrl = await getSecret(SECRET_NAMES.CHAT_WEBHOOK_URL);
+    await axios.post(webhookUrl, {
+      text: `❌ *システムエラーが発生しました*\n\n${message}`,
+    });
+  } catch (err) {
+    // 通知自体が失敗してもログのみ
+    logger.error('エラー通知の送信に失敗', { error: String(err) });
   }
-
-  if (SENDGRID_API_KEY && NOTIFY_EMAIL_TO) {
-    tasks.push(notifyEmail(message).catch(e =>
-      logger.warn('メール通知失敗', { error: String(e) })
-    ));
-  }
-
-  if (tasks.length === 0) {
-    // 通知設定なし → ログのみ
-    logger.info(`[通知] ${message.title}: ${message.body}`);
-    return;
-  }
-
-  await Promise.all(tasks);
-}
-
-// ─────────────────────────────────
-// Slack Webhook
-// ─────────────────────────────────
-async function notifySlack(message: NotifyMessage): Promise<void> {
-  const emoji = { info: ':white_check_mark:', warning: ':warning:', error: ':x:' }[message.level];
-  const color = { info: '#36a64f', warning: '#ff9900', error: '#ff0000' }[message.level];
-  const flowLabel = message.flow ? ` [フロー${message.flow}]` : '';
-
-  await axios.post(SLACK_WEBHOOK_URL!, {
-    attachments: [
-      {
-        color,
-        title: `${emoji} ${message.title}${flowLabel}`,
-        text: message.body,
-        footer: 'SNS自動投稿システム',
-        ts: Math.floor(Date.now() / 1000),
-      },
-    ],
-  });
-}
-
-// ─────────────────────────────────
-// SendGrid メール送信
-// ─────────────────────────────────
-async function notifyEmail(message: NotifyMessage): Promise<void> {
-  const subjectPrefix = { info: '✅', warning: '⚠️', error: '❌' }[message.level];
-  const flowLabel = message.flow ? `[フロー${message.flow}] ` : '';
-
-  await axios.post(
-    'https://api.sendgrid.com/v3/mail/send',
-    {
-      personalizations: [{ to: [{ email: NOTIFY_EMAIL_TO }] }],
-      from: { email: NOTIFY_EMAIL_FROM },
-      subject: `${subjectPrefix} ${flowLabel}${message.title}`,
-      content: [{ type: 'text/plain', value: message.body }],
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${SENDGRID_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-    }
-  );
-}
-
-// ─────────────────────────────────
-// よく使う通知のショートカット
-// ─────────────────────────────────
-
-export async function notifyDraftCreated(title: string, postId: number, remaining: number): Promise<void> {
-  await notify({
-    level: 'info',
-    title: 'WordPress下書きを作成しました',
-    body: `タイトル: ${title}\n記事ID: ${postId}\n\n確認・公開はWordPress管理画面から行ってください。\n残りストック: ${remaining}件`,
-    flow: 'A',
-  });
-}
-
-export async function notifyLowStock(remaining: number): Promise<void> {
-  await notify({
-    level: 'warning',
-    title: `ストックが残り${remaining}件です`,
-    body: `Google Drive の「投稿素材_キュー」フォルダに素材を追加してください。\n\nこのままでは${remaining}日後に投稿が停止します。`,
-    flow: 'A',
-  });
-}
-
-export async function notifyEmptyQueue(): Promise<void> {
-  await notify({
-    level: 'error',
-    title: 'キューが空です：本日の投稿をスキップしました',
-    body: 'Google Drive の「投稿素材_キュー」フォルダに素材を追加してください。\n素材が追加されると翌朝9:00に自動処理されます。',
-    flow: 'A',
-  });
-}
-
-export async function notifySNSPosted(articleTitle: string, results: Record<string, boolean>): Promise<void> {
-  const lines = Object.entries(results)
-    .map(([platform, success]) => `${success ? '✅' : '❌'} ${platform}`)
-    .join('\n');
-
-  const allSuccess = Object.values(results).every(Boolean);
-
-  await notify({
-    level: allSuccess ? 'info' : 'warning',
-    title: `SNS投稿完了: ${articleTitle}`,
-    body: lines,
-    flow: 'B',
-  });
-}
-
-export async function notifyError(context: string, error: unknown, flow?: 'A' | 'B'): Promise<void> {
-  await notify({
-    level: 'error',
-    title: `エラーが発生しました: ${context}`,
-    body: String(error),
-    flow,
-  });
 }

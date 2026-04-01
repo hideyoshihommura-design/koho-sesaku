@@ -3,18 +3,17 @@ import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
 const client = new SecretManagerServiceClient();
 const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT!;
 
-// シークレット名の定義
+// Phase A で使用するシークレット名
 export const SECRET_NAMES = {
-  WORDPRESS_APP_PASSWORD: 'wordpress-app-password',
-  HUBSPOT_ACCESS_TOKEN: 'hubspot-access-token',
-  TIKTOK_ACCESS_TOKEN: 'tiktok-access-token',
-  GOOGLE_DRIVE_SERVICE_ACCOUNT: 'google-drive-service-account',
-  // 別フロー（LIFULL介護）用。フローBからは使用しない
-  LIFULL_LOGIN_EMAIL: 'lifull-login-email',
-  LIFULL_LOGIN_PASSWORD: 'lifull-login-password',
+  ANTHROPIC_API_KEY: 'anthropic-api-key',
+  GOOGLE_SERVICE_ACCOUNT: 'google-service-account',   // Drive/Sheets アクセス用 SA JSON
+  CHAT_WEBHOOK_URL: 'chat-webhook-url',               // 通知用 Google Chat Incoming Webhook URL
+  SCHEDULER_SECRET: 'scheduler-secret',               // Cloud Scheduler 認証トークン
+  SHEETS_ID: 'sheets-id',                             // Google スプレッドシート ID
+  DRIVE_FOLDER_ID: 'drive-folder-id',                 // Google Drive ルートフォルダ ID
 } as const;
 
-// キャッシュ（Cloud Run インスタンスのライフタイム中はキャッシュする）
+// Cloud Run インスタンスのライフタイム中はキャッシュ
 const cache = new Map<string, string>();
 
 export async function getSecret(secretName: string): Promise<string> {
@@ -32,14 +31,4 @@ export async function getSecret(secretName: string): Promise<string> {
 
   cache.set(secretName, payload);
   return payload;
-}
-
-export async function getAllSecrets() {
-  const [wordpressPassword, hubspotToken, tiktokToken] = await Promise.all([
-    getSecret(SECRET_NAMES.WORDPRESS_APP_PASSWORD),
-    getSecret(SECRET_NAMES.HUBSPOT_ACCESS_TOKEN),
-    getSecret(SECRET_NAMES.TIKTOK_ACCESS_TOKEN),
-  ]);
-
-  return { wordpressPassword, hubspotToken, tiktokToken };
 }
