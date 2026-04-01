@@ -217,7 +217,8 @@
     <span class="badge">v4.0 2026-03-31</span>
     <span class="badge">v4.1 2026-03-31</span>
     <span class="badge">v4.2 2026-04-01 承認フロー確定</span>
-    <span class="badge current">v4.3 2026-04-01 現行</span>
+    <span class="badge">v4.3 2026-04-01 承認フロー・素材投入確定</span>
+    <span class="badge current">v4.4 2026-04-01 現行</span>
   </div>
 
   <!-- やりたいこと -->
@@ -244,7 +245,7 @@
       <div class="step">
         <div class="step-num">②</div>
         <div class="step-title">自動保存・起動</div>
-        <div class="step-desc">BotがGoogle Driveに自動保存。毎朝9:00にシステムが起動して素材を取り込む</div>
+        <div class="step-desc">BotがGoogle Driveに自動保存。1日2回（18:00・23:00）システムが起動して素材を取り込む</div>
       </div>
       <div class="step">
         <div class="step-num">③</div>
@@ -428,6 +429,30 @@ flowchart LR
     </div>
   </div>
 
+  <!-- 素材検知・取り込み -->
+  <div class="section">
+    <div class="section-title">② 素材の検知・取り込み</div>
+
+    <div style="margin-bottom:24px">
+      <div style="font-size:0.88rem;font-weight:bold;color:#7dd3fc;margin-bottom:12px;">処理スケジュール</div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>回</th><th>処理時刻</th><th>通知タイミング</th><th>対象素材</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1回目</td><td>18:00</td><td>18時過ぎ</td><td>主に14〜17時台に届いた素材</td></tr>
+            <tr><td>2回目</td><td>23:00</td><td>翌朝8:00</td><td>主に17〜20時台に届いた素材</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="font-size:0.8rem;color:#64748b;margin-top:12px;line-height:1.8;">
+        ※ 翌朝9:00には両バッチの通知が届いており、出社後すぐ確認できる状態になっている<br>
+        ※ キュー内の複数件をまとめて処理
+      </div>
+    </div>
+  </div>
+
   <!-- SNS投稿文生成プロンプト -->
   <div class="section">
     <div class="section-title">③ SNS投稿文生成プロンプト設計</div>
@@ -570,6 +595,7 @@ flowchart TD
           <tbody>
             <tr><td>生成日時</td><td>いつ生成されたか</td></tr>
             <tr><td>素材フォルダ名</td><td>どの素材から生成したか（例：001_20260401_0912）</td></tr>
+            <tr><td>拠点</td><td>コメントからClaudeが自動検出（不明の場合は手動入力）</td></tr>
             <tr><td>Facebook投稿文</td><td>生成されたテキスト（セルを直接編集して修正可）</td></tr>
             <tr><td>Facebook</td><td>投稿する／投稿しない（ボタン）</td></tr>
             <tr><td>Instagram投稿文</td><td>生成されたテキスト（修正可）</td></tr>
@@ -758,7 +784,7 @@ flowchart TD
   </div>
 
   <footer>
-    SNS自動投稿システム 計画図 v4.3 — 最終更新: 2026-04-01
+    SNS自動投稿システム 計画図 v4.4 — 最終更新: 2026-04-01
   </footer>
 
   <script>
