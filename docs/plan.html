@@ -220,7 +220,8 @@
     <span class="badge">v4.3 2026-04-01 承認フロー・素材投入確定</span>
     <span class="badge">v4.4 2026-04-01 処理スケジュール確定</span>
     <span class="badge">v4.5 2026-04-01 素材検知詳細化</span>
-    <span class="badge current">v4.6 2026-04-01 現行</span>
+    <span class="badge">v4.6 2026-04-01 AI生成詳細化</span>
+    <span class="badge current">v4.7 2026-04-01 現行</span>
   </div>
 
   <!-- やりたいこと -->
@@ -665,8 +666,9 @@ flowchart TD
 
   <!-- SNS別投稿仕様 -->
   <div class="section">
-    <div class="section-title">⑥ SNS別 投稿仕様</div>
-    <div class="table-wrapper">
+    <div class="section-title">⑥ SNS自動投稿</div>
+
+    <div class="table-wrapper" style="margin-bottom:24px">
       <table>
         <thead>
           <tr>
@@ -681,14 +683,14 @@ flowchart TD
           <tr>
             <td>Facebook</td>
             <td>Meta Graph API</td>
-            <td>投稿文 ＋ 画像</td>
+            <td>投稿文 ＋ 画像（複数枚可）</td>
             <td>〜300文字</td>
             <td>ページ管理者権限が必要</td>
           </tr>
           <tr>
             <td>Instagram</td>
             <td>Meta Graph API</td>
-            <td>投稿文 ＋ 画像 または リール動画</td>
+            <td>投稿文 ＋ 画像（カルーセル可）または リール動画</td>
             <td>〜150文字 ＋ ハッシュタグ</td>
             <td>Facebookと同じAPIで可</td>
           </tr>
@@ -702,12 +704,46 @@ flowchart TD
           <tr>
             <td>X（Twitter）</td>
             <td>X API v2</td>
-            <td>投稿文 ＋ 画像</td>
+            <td>投稿文 ＋ 画像（最大4枚）</td>
             <td>〜140文字</td>
             <td>有料プラン必須（Basic $100/月〜）</td>
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <div style="margin-bottom:24px">
+      <div style="font-size:0.88rem;font-weight:bold;color:#7dd3fc;margin-bottom:12px;">投稿タイミング・完了時</div>
+      <div style="background:#0f1117;border:1px solid #334155;border-radius:8px;padding:16px;font-size:0.85rem;color:#e2e8f0;line-height:1.8;">
+        SNSごとに「投稿する」ボタンを押した瞬間に即時投稿<br>
+        <span style="color:#64748b">※ 投稿完了時は通知なし。スプレッドシートのステータスが「投稿済み」に自動更新される</span>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:0.88rem;font-weight:bold;color:#7dd3fc;margin-bottom:12px;">失敗時の対応</div>
+      <div class="mermaid">
+flowchart TD
+    A["投稿失敗"]
+    B{"エラーの種類"}
+    C["一時的なエラー\nAPI障害・通信障害"]
+    D["自動で再試行\n（3回まで）"]
+    E["再試行後も失敗"]
+    F["認証エラー\nルール違反"]
+    G["担当者にエラー通知\nSNS・素材・エラー内容・対応方法を明記"]
+
+    A --> B
+    B --> C --> D --> E --> G
+    B --> F --> G
+
+    style A fill:#2d1a1a,color:#fca5a5,stroke:#ef4444
+    style B fill:#1e293b,color:#e2e8f0,stroke:#94a3b8
+    style C fill:#78350f,color:#fcd34d,stroke:#f59e0b
+    style D fill:#1e293b,color:#94a3b8,stroke:#475569
+    style E fill:#2d1a1a,color:#fca5a5,stroke:#ef4444
+    style F fill:#2d1a1a,color:#fca5a5,stroke:#ef4444
+    style G fill:#2d1a00,color:#fcd34d,stroke:#f59e0b
+      </div>
     </div>
   </div>
 
@@ -835,7 +871,7 @@ flowchart TD
   </div>
 
   <footer>
-    SNS自動投稿システム 計画図 v4.6 — 最終更新: 2026-04-01
+    SNS自動投稿システム 計画図 v4.7 — 最終更新: 2026-04-01
   </footer>
 
   <script>
