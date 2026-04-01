@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SNS自動投稿システム 計画図 v4.1</title>
+  <title>SNS自動投稿システム 計画図 v4.3</title>
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -145,9 +145,10 @@
       font-weight: bold;
     }
 
-    .tag-high { background: #7f1d1d; color: #fca5a5; }
-    .tag-mid  { background: #78350f; color: #fcd34d; }
-    .tag-low  { background: #1e3a5f; color: #93c5fd; }
+    .tag-high   { background: #7f1d1d; color: #fca5a5; }
+    .tag-mid    { background: #78350f; color: #fcd34d; }
+    .tag-low    { background: #1e3a5f; color: #93c5fd; }
+    .tag-done   { background: #14532d; color: #86efac; }
 
     .highlight-box {
       background: #0c1a2e;
@@ -208,22 +209,24 @@
 <body>
 
   <h1>SNS自動投稿システム</h1>
-  <p class="subtitle">Google Drive → AI生成 → 承認 → 全SNS自動投稿 → WordPress お知らせ更新</p>
+  <p class="subtitle">Google Chat → AI生成 → スプレッドシート承認 → 全SNS自動投稿 → WordPress お知らせ更新</p>
 
   <div class="version-badge">
     <span class="badge">v1〜v3 2026-03-07</span>
     <span class="badge">v4〜v7 2026-03-19</span>
     <span class="badge">v4.0 2026-03-31</span>
-    <span class="badge current">v4.1 2026-03-31 現行</span>
+    <span class="badge">v4.1 2026-03-31</span>
+    <span class="badge">v4.2 2026-04-01 承認フロー確定</span>
+    <span class="badge current">v4.3 2026-04-01 現行</span>
   </div>
 
   <!-- やりたいこと -->
   <div class="section">
     <div class="section-title">やりたいこと</div>
     <div class="highlight-box">
-      Google Drive の専用フォルダに素材（写真・テキストなど）を入れるだけで、<br>
-      AI が各SNS用の投稿文・画像・リール動画を自動生成。<br>
-      担当者が確認・承認したら、Facebook / Instagram / TikTok / X へ自動投稿。<br>
+      現場スタッフが<strong>今と同じ操作（Google Chatに写真＋コメントを送るだけ）</strong>で、<br>
+      AI が各SNS用の投稿文・リール動画を自動生成。<br>
+      広報担当者がGoogleスプレッドシートで確認・修正し、SNSごとに承認したら自動投稿。<br>
       投稿後は WordPress のお知らせに下書きを自動作成する。
     </div>
   </div>
@@ -235,13 +238,13 @@
     <div class="flow-steps">
       <div class="step">
         <div class="step-num">①</div>
-        <div class="step-title">素材を投入</div>
-        <div class="step-desc">担当者がGoogle Driveの専用フォルダに写真・コメント.txtを入れる</div>
+        <div class="step-title">素材を送る</div>
+        <div class="step-desc">現場スタッフが既存のGoogle Chatグループに写真＋コメントを送る（今と同じ操作）</div>
       </div>
       <div class="step">
         <div class="step-num">②</div>
-        <div class="step-title">自動起動</div>
-        <div class="step-desc">毎朝9:00にCloud Schedulerがシステムを起動し、素材を取り込む</div>
+        <div class="step-title">自動保存・起動</div>
+        <div class="step-desc">BotがGoogle Driveに自動保存。毎朝9:00にシステムが起動して素材を取り込む</div>
       </div>
       <div class="step">
         <div class="step-num">③</div>
@@ -251,17 +254,17 @@
       <div class="step">
         <div class="step-num">④</div>
         <div class="step-title">確認通知</div>
-        <div class="step-desc">SlackまたはメールでAIが作ったコンテンツの確認依頼が届く</div>
+        <div class="step-desc">Google Chat Botがスプレッドシートのリンクを通知。3日放置でリマインダー再通知</div>
       </div>
       <div class="step">
         <div class="step-num">⑤</div>
-        <div class="step-title">承認</div>
-        <div class="step-desc">確認画面で内容を確認・修正し、「承認」ボタンを押す</div>
+        <div class="step-title">確認・承認</div>
+        <div class="step-desc">スプレッドシートで内容確認・修正し、SNSごとに「投稿する」「投稿しない」を選択</div>
       </div>
       <div class="step">
         <div class="step-num">⑥</div>
-        <div class="step-title">全SNS投稿</div>
-        <div class="step-desc">Facebook・Instagram・TikTok・X へ自動投稿される</div>
+        <div class="step-title">SNS投稿</div>
+        <div class="step-desc">「投稿する」にしたSNSのみ自動投稿。履歴はスプレッドシートに残る</div>
       </div>
       <div class="step">
         <div class="step-num">⑦</div>
@@ -272,18 +275,18 @@
 
     <div class="mermaid">
 flowchart TD
-    A["① 担当者がGoogle Driveに素材を投入\n（写真 ＋ コメント.txt）"]
-    B["② Cloud Scheduler\n毎朝 9:00 自動起動"]
-    C["Cloud Run\nメインアプリ"]
-    D["Google Drive API\n素材を取得"]
-    E["③ Claude API\n各SNS用の投稿文を生成"]
-    F["Veo / Vertex AI\nリール動画を生成"]
-    G["Firestore\n承認待ちデータを保存"]
-    H["④ Slack / メール\n担当者へ確認依頼通知"]
-    I["⑤ 確認画面\n内容を確認・修正"]
-    J{"承認?"}
-    K["⑥ 全SNSへ自動投稿"]
-    L["破棄"]
+    A["① 現場スタッフが既存のGoogle Chatグループに\n写真＋コメントを送る（今と同じ操作）"]
+    B["Google Chat Bot\nメッセージを受信"]
+    C["② Google Drive\n投稿素材_キュー/ に自動保存\nフォルダ・番号は自動付与"]
+    D["Cloud Scheduler\n毎朝 9:00 自動起動"]
+    E["Cloud Run\nメインアプリ"]
+    F["③ Claude API\n各SNS用の投稿文を生成"]
+    G["Veo / Vertex AI\nリール動画を生成"]
+    H["Googleスプレッドシート\n投稿文・動画URLを自動書き出し"]
+    I["④ Google Chat Bot\nスプレッドシートのリンクを通知\n（3日後リマインダーあり）"]
+    J["⑤ 担当者がスプレッドシートで\n内容確認・修正"]
+    K["SNSごとに\n「投稿する」「投稿しない」を選択"]
+    L["⑥ 「投稿する」にしたSNSのみ自動投稿"]
     M["Facebook\nMeta Graph API"]
     N["Instagram\nMeta Graph API"]
     O["TikTok\nContent Posting API"]
@@ -291,27 +294,25 @@ flowchart TD
     Q["⑦ WordPress REST API\nお知らせ下書きを自動作成"]
     R["担当者が内容を仕上げて公開"]
 
-    A --> B --> C --> D --> E --> F --> G --> H --> I --> J
-    J -- 承認 --> K
-    J -- 却下 --> L
-    K --> M
-    K --> N
-    K --> O
-    K --> P
-    K --> Q --> R
+    A --> B --> C --> D --> E --> F --> G --> H --> I --> J --> K --> L
+    L --> M
+    L --> N
+    L --> O
+    L --> P
+    L --> Q --> R
 
     style A fill:#1e3a5f,color:#93c5fd,stroke:#3b82f6
     style B fill:#1e293b,color:#94a3b8,stroke:#475569
     style C fill:#1e293b,color:#94a3b8,stroke:#475569
     style D fill:#1e293b,color:#94a3b8,stroke:#475569
-    style E fill:#1a2e1a,color:#86efac,stroke:#22c55e
+    style E fill:#1e293b,color:#94a3b8,stroke:#475569
     style F fill:#1a2e1a,color:#86efac,stroke:#22c55e
-    style G fill:#1e293b,color:#94a3b8,stroke:#475569
-    style H fill:#2d1a00,color:#fcd34d,stroke:#f59e0b
+    style G fill:#1a2e1a,color:#86efac,stroke:#22c55e
+    style H fill:#1e3a2e,color:#6ee7b7,stroke:#10b981
     style I fill:#2d1a00,color:#fcd34d,stroke:#f59e0b
-    style J fill:#1e293b,color:#e2e8f0,stroke:#94a3b8
-    style K fill:#1a1a3e,color:#a5b4fc,stroke:#6366f1
-    style L fill:#2d1a1a,color:#fca5a5,stroke:#ef4444
+    style J fill:#2d1a00,color:#fcd34d,stroke:#f59e0b
+    style K fill:#2d1a00,color:#fcd34d,stroke:#f59e0b
+    style L fill:#1a1a3e,color:#a5b4fc,stroke:#6366f1
     style M fill:#1a1a3e,color:#a5b4fc,stroke:#6366f1
     style N fill:#1a1a3e,color:#a5b4fc,stroke:#6366f1
     style O fill:#1a1a3e,color:#a5b4fc,stroke:#6366f1
@@ -329,7 +330,6 @@ graph TB
     subgraph GCP["Google Cloud Platform"]
         CS["Cloud Scheduler\n毎朝9:00"]
         CR["Cloud Run\nNode.js / TypeScript"]
-        FS["Firestore\n承認待ちデータ"]
         GCS["Cloud Storage\n生成動画の保存"]
         SM["Secret Manager\nAPIキー管理"]
         VA["Vertex AI / Veo\n動画生成"]
@@ -346,116 +346,98 @@ graph TB
         XA["X API v2"]
     end
 
-    subgraph Other["その他"]
+    subgraph Google["Google Workspace"]
         GD["Google Drive\n素材フォルダ"]
+        GC["Google Chat Bot\n素材受信・通知"]
+        SS["Googleスプレッドシート\n承認・履歴管理"]
+    end
+
+    subgraph Other["その他"]
         WP["WordPress\nREST API"]
-        SL["Slack / メール\n通知"]
     end
 
     CS --> CR
-    CR --- FS
     CR --> GCS
     CR --> VA
     SM --> CR
     CR --> CL
     CR --> CA
     CR --> GD
+    CR --> SS
+    GC --> GD
+    GC --> SS
     CR --> META
     CR --> TT
     CR --> XA
     CR --> WP
-    CR --> SL
     </div>
   </div>
 
-  <!-- Google Drive 素材管理 -->
+  <!-- 素材投入フロー -->
   <div class="section">
-    <div class="section-title">Google Drive 素材管理</div>
+    <div class="section-title">① 素材の投入（現場スタッフ）</div>
 
-    <div class="flow-steps">
-      <div class="step">
-        <div class="step-num">①</div>
-        <div class="step-title">フォルダ番号で順序管理</div>
-        <div class="step-desc">先頭に 001_ 002_ と番号をつける。小さい番号から順に処理。順序変更は番号を変えるだけ</div>
-      </div>
-      <div class="step">
-        <div class="step-num">②</div>
-        <div class="step-title">素材は画像 ＋ コメント.txt</div>
-        <div class="step-desc">フォルダに画像（何枚でも可）とコメント.txtを入れる。画像なしでもOK</div>
-      </div>
-      <div class="step">
-        <div class="step-num">③</div>
-        <div class="step-title">投稿済みは自動で移動</div>
-        <div class="step-desc">処理が完了したフォルダはシステムが「処理済み/」に自動移動。過去の投稿内容はそのまま参照できる</div>
-      </div>
+    <div class="highlight-box">
+      現場スタッフの操作は<strong>今と全く変わらない</strong>。<br>
+      既存のGoogle Chatグループに写真＋コメントを送るだけ。フォルダ作成・番号付けはすべて自動。
     </div>
 
     <div class="mermaid">
 flowchart LR
-    subgraph Queue["投稿待ち/"]
-        F1["📁 001_スタッフ紹介\n├ 写真.jpg\n└ コメント.txt"]
-        F2["📁 002_イベント告知\n├ 写真1.jpg\n├ 写真2.jpg\n└ コメント.txt"]
-        F3["📁 003_施設紹介\n└ コメント.txt\n（画像なしもOK）"]
+    subgraph Staff["現場スタッフ（今と同じ操作）"]
+        S1["Google Chatグループに\n写真＋コメントを送る"]
     end
 
-    subgraph Process["システム処理"]
-        P1["コメント.txtを読み込み\n画像を解析"]
-        P2["Claude が\n投稿文を生成"]
-        P3["Veo が\nリール動画を生成"]
+    subgraph Bot["Google Chat Bot（自動）"]
+        B1["メッセージを受信"]
+        B2["Google Driveに\nフォルダを自動作成\n001_20260401_0912/"]
+        B3["写真・コメントを保存"]
+    end
+
+    subgraph Queue["投稿素材_キュー/（Google Drive）"]
+        F1["📁 001_20260401_0912\n├ 写真.jpg\n└ コメント.txt"]
+        F2["📁 002_20260401_1034\n├ 写真1.jpg\n├ 写真2.jpg\n└ コメント.txt"]
     end
 
     subgraph Done["処理済み/"]
-        D1["✅ 001_スタッフ紹介\n（自動移動）"]
+        D1["✅ 001_20260401_0912\n（自動移動）"]
     end
 
-    F1 -- 当日処理 --> P1
-    F2 -- 翌日以降 --> F2
-    F3 -- 翌々日以降 --> F3
-    P1 --> P2 --> P3
-    P3 -- 完了後 --> D1
+    S1 --> B1 --> B2 --> B3
+    B3 --> F1
+    F1 -- 処理完了後 --> D1
+    F2 -- 翌日以降に処理 --> F2
 
-    style F1 fill:#1e3a5f,color:#93c5fd,stroke:#3b82f6
+    style S1 fill:#1e3a5f,color:#93c5fd,stroke:#3b82f6
+    style B1 fill:#1e293b,color:#94a3b8,stroke:#475569
+    style B2 fill:#1e293b,color:#94a3b8,stroke:#475569
+    style B3 fill:#1e293b,color:#94a3b8,stroke:#475569
+    style F1 fill:#1e3a2e,color:#6ee7b7,stroke:#10b981
     style F2 fill:#1e293b,color:#94a3b8,stroke:#475569
-    style F3 fill:#1e293b,color:#94a3b8,stroke:#475569
-    style P1 fill:#1a2e1a,color:#86efac,stroke:#22c55e
-    style P2 fill:#1a2e1a,color:#86efac,stroke:#22c55e
-    style P3 fill:#1a2e1a,color:#86efac,stroke:#22c55e
     style D1 fill:#1a2e2e,color:#67e8f9,stroke:#06b6d4
     </div>
 
     <div style="margin-top:24px">
-      <div style="font-size:0.88rem;font-weight:bold;color:#7dd3fc;margin-bottom:12px;">コメント.txt のフォーマット</div>
+      <div style="font-size:0.88rem;font-weight:bold;color:#7dd3fc;margin-bottom:12px;">コメントの書き方（自由記述でOK）</div>
       <div style="background:#0f1117;border:1px solid #334155;border-radius:8px;padding:20px;font-family:'Courier New',monospace;font-size:0.85rem;color:#e2e8f0;line-height:1.8;">
-        <span style="color:#475569">【内容】</span><br>
-        ここに投稿の内容・背景を自由に書く。<br>
-        誰の・何のための投稿か、伝えたいことなど。<br>
-        <br>
-        <span style="color:#475569">【特別な指示】（不要なら空白でOK）</span><br>
-        明るい雰囲気で。ハッシュタグは介護系を多めに。など
-      </div>
-      <div style="margin-top:12px;background:#0f1117;border:1px solid #334155;border-radius:8px;padding:20px;font-family:'Courier New',monospace;font-size:0.85rem;color:#e2e8f0;line-height:1.8;">
-        <span style="color:#64748b">↓ 記入例</span><br>
-        <br>
-        <span style="color:#475569">【内容】</span><br>
+        <span style="color:#64748b">↓ 記入例</span><br><br>
         今月入社したスタッフの山田さんの紹介です。<br>
-        趣味はガーデニングで、利用者さんとの庭作りが得意です。<br>
-        <br>
-        <span style="color:#475569">【特別な指示】</span><br>
-        温かみのある雰囲気で。
+        趣味はガーデニングで、利用者さんとの庭作りが得意。<br>
+        明るくて元気な雰囲気が伝わるような投稿にしてください。
       </div>
     </div>
   </div>
 
   <!-- SNS投稿文生成プロンプト -->
   <div class="section">
-    <div class="section-title">SNS投稿文生成プロンプト設計</div>
+    <div class="section-title">③ SNS投稿文生成プロンプト設計</div>
     <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:20px;">
       <code style="background:#1e293b;padding:2px 8px;border-radius:4px;color:#7dd3fc;">draft-content</code> スキルの構造をベースに、Cloud Runアプリ用のプロンプトを設計する。
     </div>
 
     <div class="mermaid">
 flowchart LR
-    A["コメント.txt\n担当者の説明・指示"]
+    A["コメント\n担当者の説明・指示"]
     B["画像解析結果\nClaudeが画像を説明"]
     C["Claude API\nプロンプトに組み込み"]
     D["Facebook投稿文\n300文字以内\n絵文字・CTA・ハッシュタグ"]
@@ -527,9 +509,86 @@ flowchart LR
     </div>
   </div>
 
+  <!-- 確認・承認フロー -->
+  <div class="section">
+    <div class="section-title">④〜⑤ 確認・承認フロー</div>
+
+    <div class="mermaid">
+flowchart TD
+    A["AI生成完了\n投稿文・動画"]
+    B["Googleスプレッドシートに\n自動書き出し\n投稿文・動画URL・生成日時"]
+    C["Google Chat Bot が通知\n「生成が完了しました。確認してください」\n＋ スプレッドシートのリンク"]
+    D{"3日後も\n未対応?"}
+    E["Google Chat Bot\nリマインダー再通知"]
+    F["担当者がスプレッドシートを開いて\n内容確認・セルを直接修正"]
+    G["SNSごとに判断\n「投稿する」「投稿しない」ボタン"]
+    H["「投稿する」にしたSNSのみ\n自動投稿"]
+    I["「投稿しない」\n→ 行は削除せず履歴として保持"]
+
+    A --> B --> C --> D
+    D -- はい --> E --> F
+    D -- いいえ --> F
+    F --> G
+    G -- 投稿する --> H
+    G -- 投稿しない --> I
+
+    style A fill:#1a2e1a,color:#86efac,stroke:#22c55e
+    style B fill:#1e3a2e,color:#6ee7b7,stroke:#10b981
+    style C fill:#2d1a00,color:#fcd34d,stroke:#f59e0b
+    style D fill:#1e293b,color:#e2e8f0,stroke:#94a3b8
+    style E fill:#2d1a00,color:#fcd34d,stroke:#f59e0b
+    style F fill:#2d1a00,color:#fcd34d,stroke:#f59e0b
+    style G fill:#2d1a00,color:#fcd34d,stroke:#f59e0b
+    style H fill:#1a1a3e,color:#a5b4fc,stroke:#6366f1
+    style I fill:#1e293b,color:#94a3b8,stroke:#475569
+    </div>
+
+    <div style="margin-top:24px">
+      <div style="font-size:0.88rem;font-weight:bold;color:#7dd3fc;margin-bottom:12px;">ステータスの種類</div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>ステータス</th><th>意味</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>確認待ち</td><td>生成直後、まだ確認していない</td></tr>
+            <tr><td>承認済み</td><td>「投稿する」ボタンを押した</td></tr>
+            <tr><td>投稿しない</td><td>今回はスキップ（行は履歴として残る）</td></tr>
+            <tr><td>投稿済み</td><td>SNS投稿完了</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="margin-top:24px">
+      <div style="font-size:0.88rem;font-weight:bold;color:#7dd3fc;margin-bottom:12px;">スプレッドシートの項目</div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>列</th><th>内容</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>生成日時</td><td>いつ生成されたか</td></tr>
+            <tr><td>素材フォルダ名</td><td>どの素材から生成したか（例：001_20260401_0912）</td></tr>
+            <tr><td>Facebook投稿文</td><td>生成されたテキスト（セルを直接編集して修正可）</td></tr>
+            <tr><td>Facebook</td><td>投稿する／投稿しない（ボタン）</td></tr>
+            <tr><td>Instagram投稿文</td><td>生成されたテキスト（修正可）</td></tr>
+            <tr><td>Instagram</td><td>投稿する／投稿しない（ボタン）</td></tr>
+            <tr><td>TikTok投稿文</td><td>生成されたテキスト（修正可）</td></tr>
+            <tr><td>TikTok</td><td>投稿する／投稿しない（ボタン）</td></tr>
+            <tr><td>X投稿文</td><td>生成されたテキスト（修正可）</td></tr>
+            <tr><td>X</td><td>投稿する／投稿しない（ボタン）</td></tr>
+            <tr><td>動画URL</td><td>Cloud StorageのURL（クリックで確認）</td></tr>
+            <tr><td>投稿日時</td><td>実際に投稿された日時（自動記録）</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <!-- SNS別投稿仕様 -->
   <div class="section">
-    <div class="section-title">SNS別 投稿仕様</div>
+    <div class="section-title">⑥ SNS別 投稿仕様</div>
     <div class="table-wrapper">
       <table>
         <thead>
@@ -575,63 +634,6 @@ flowchart LR
     </div>
   </div>
 
-  <!-- 生成物の管理・承認フロー -->
-  <div class="section">
-    <div class="section-title">生成物の管理・承認フロー</div>
-
-    <div class="mermaid">
-flowchart TD
-    A["AI生成完了\n投稿文・動画"]
-    B["Googleスプレッドシートに\n自動書き出し\n投稿文・動画URL・生成日時"]
-    C["Google Chat Bot が通知\n「確認してください」\n＋ スプシのリンク"]
-    D["承認ボタン\n却下ボタン"]
-    E["担当者がスプレッドシートで\n内容を確認・修正"]
-    F["Google Chatで\n「承認」ボタンを押す"]
-    G["全SNSへ自動投稿"]
-    H["スプレッドシートに\n投稿日時・ステータスを記録"]
-    I["却下\n→ 破棄"]
-
-    A --> B --> C --> D
-    D --> E --> F --> G --> H
-    D --> I
-
-    style A fill:#1a2e1a,color:#86efac,stroke:#22c55e
-    style B fill:#1e3a2e,color:#6ee7b7,stroke:#10b981
-    style C fill:#2d1a00,color:#fcd34d,stroke:#f59e0b
-    style D fill:#1e293b,color:#e2e8f0,stroke:#94a3b8
-    style E fill:#2d1a00,color:#fcd34d,stroke:#f59e0b
-    style F fill:#2d1a00,color:#fcd34d,stroke:#f59e0b
-    style G fill:#1a1a3e,color:#a5b4fc,stroke:#6366f1
-    style H fill:#1e3a2e,color:#6ee7b7,stroke:#10b981
-    style I fill:#2d1a1a,color:#fca5a5,stroke:#ef4444
-    </div>
-
-    <div style="margin-top:24px">
-      <div style="font-size:0.88rem;font-weight:bold;color:#7dd3fc;margin-bottom:12px;">スプレッドシートの項目</div>
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>列</th>
-              <th>内容</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td>生成日時</td><td>いつ生成されたか</td></tr>
-            <tr><td>素材フォルダ名</td><td>どの素材から生成したか（例：001_スタッフ紹介）</td></tr>
-            <tr><td>Facebook投稿文</td><td>生成されたテキスト（修正可）</td></tr>
-            <tr><td>Instagram投稿文</td><td>生成されたテキスト（修正可）</td></tr>
-            <tr><td>TikTok投稿文</td><td>生成されたテキスト（修正可）</td></tr>
-            <tr><td>X投稿文</td><td>生成されたテキスト（修正可）</td></tr>
-            <tr><td>動画URL</td><td>Cloud StorageのURL（クリックで確認）</td></tr>
-            <tr><td>ステータス</td><td>承認済み／却下／投稿済み</td></tr>
-            <tr><td>投稿日時</td><td>実際に投稿された日時（自動記録）</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
   <!-- 実装フェーズ -->
   <div class="section">
     <div class="section-title">実装フェーズ</div>
@@ -654,7 +656,7 @@ flowchart TD
         <div class="phase-num">Phase 3</div>
         <div>
           <div class="phase-name">Google Chat Bot・承認フロー実装（1週間）</div>
-          <div class="phase-detail">Google Chat Bot の作成 / 生成完了通知（スプレッドシートリンク付き） / 「承認」「却下」ボタンの実装 / 承認後の自動投稿トリガー</div>
+          <div class="phase-detail">Google Chat Bot の作成（素材受信 ＋ 通知） / 生成完了通知（スプレッドシートリンク付き） / スプレッドシートにSNSごとの「投稿する」「投稿しない」ボタンを実装 / 3日後リマインダー通知の実装 / 承認後の自動投稿トリガー</div>
         </div>
       </div>
       <div class="phase">
@@ -698,43 +700,57 @@ flowchart TD
             <th>項目</th>
             <th>内容</th>
             <th>優先度</th>
+            <th>状態</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>通知方法</td>
-            <td>SlackかメールかLINEか</td>
+            <td>Google Chat Botで通知・承認もスプレッドシート上で完結</td>
             <td><span class="tag tag-high">高</span></td>
+            <td><span class="tag tag-done">決定済み</span></td>
+          </tr>
+          <tr>
+            <td>承認フロー</td>
+            <td>SNSごとに個別承認・3日後リマインダー・「投稿しない」は履歴保持</td>
+            <td><span class="tag tag-high">高</span></td>
+            <td><span class="tag tag-done">決定済み</span></td>
+          </tr>
+          <tr>
+            <td>素材投入方法</td>
+            <td>既存のGoogle ChatグループにBotを追加、全メッセージを素材として処理</td>
+            <td><span class="tag tag-high">高</span></td>
+            <td><span class="tag tag-done">決定済み</span></td>
           </tr>
           <tr>
             <td>TikTok API申請</td>
             <td>Business API の申請（審査2〜4週間）</td>
             <td><span class="tag tag-high">高</span></td>
+            <td><span class="tag tag-high">未対応</span></td>
           </tr>
           <tr>
             <td>X API プラン</td>
             <td>Basic（$100/月）以上が必要か確認</td>
             <td><span class="tag tag-high">高</span></td>
+            <td><span class="tag tag-high">未対応</span></td>
           </tr>
           <tr>
             <td>Meta API設定</td>
             <td>FacebookページのAPI権限設定</td>
             <td><span class="tag tag-high">高</span></td>
+            <td><span class="tag tag-high">未対応</span></td>
           </tr>
           <tr>
             <td>投稿プロンプト</td>
             <td>各SNSの文体・トーン・禁止事項の定義</td>
             <td><span class="tag tag-mid">中</span></td>
+            <td><span class="tag tag-high">未対応</span></td>
           </tr>
           <tr>
             <td>動画スタイル</td>
             <td>Veoに指示するリール動画のスタイル</td>
             <td><span class="tag tag-mid">中</span></td>
-          </tr>
-          <tr>
-            <td>承認UIデザイン</td>
-            <td>確認画面のUIデザイン</td>
-            <td><span class="tag tag-low">低</span></td>
+            <td><span class="tag tag-high">未対応</span></td>
           </tr>
         </tbody>
       </table>
@@ -742,7 +758,7 @@ flowchart TD
   </div>
 
   <footer>
-    SNS自動投稿システム 計画図 v4.1 — 最終更新: 2026-03-31
+    SNS自動投稿システム 計画図 v4.3 — 最終更新: 2026-04-01
   </footer>
 
   <script>
