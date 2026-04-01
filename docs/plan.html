@@ -218,7 +218,8 @@
     <span class="badge">v4.1 2026-03-31</span>
     <span class="badge">v4.2 2026-04-01 承認フロー確定</span>
     <span class="badge">v4.3 2026-04-01 承認フロー・素材投入確定</span>
-    <span class="badge current">v4.4 2026-04-01 現行</span>
+    <span class="badge">v4.4 2026-04-01 処理スケジュール確定</span>
+    <span class="badge current">v4.5 2026-04-01 現行</span>
   </div>
 
   <!-- やりたいこと -->
@@ -434,7 +435,15 @@ flowchart LR
     <div class="section-title">② 素材の検知・取り込み</div>
 
     <div style="margin-bottom:24px">
-      <div style="font-size:0.88rem;font-weight:bold;color:#7dd3fc;margin-bottom:12px;">処理スケジュール</div>
+      <div style="font-size:0.88rem;font-weight:bold;color:#7dd3fc;margin-bottom:12px;">Google Chat Bot による自動保存（リアルタイム）</div>
+      <div class="highlight-box">
+        現場スタッフがメッセージを送った<strong>瞬間</strong>にBotが検知し、Google Driveに自動保存。<br>
+        既存のGoogle Chatや業務システムへの負担はなし。BotはCloud Run上で動作（追加コストはほぼゼロ）。
+      </div>
+    </div>
+
+    <div style="margin-bottom:24px">
+      <div style="font-size:0.88rem;font-weight:bold;color:#7dd3fc;margin-bottom:12px;">処理スケジュール（1日2回）</div>
       <div class="table-wrapper">
         <table>
           <thead>
@@ -784,7 +793,7 @@ flowchart TD
   </div>
 
   <footer>
-    SNS自動投稿システム 計画図 v4.4 — 最終更新: 2026-04-01
+    SNS自動投稿システム 計画図 v4.5 — 最終更新: 2026-04-01
   </footer>
 
   <script>
