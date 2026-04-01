@@ -141,8 +141,7 @@ koho-sesaku/
 ├── sync.sh                      # 同期スクリプト（Hommuraさんが使用）
 ├── 作業履歴.md                  # 作業記録
 ├── 会話履歴.md                  # Claude Codeとのやり取り記録
-├── SNS自動投稿_計画書v3.md      # システム設計書（最新）
-├── SNS自動投稿_システム図.md    # Mermaid構成図
+├── SNS自動投稿_計画書v4.md      # システム設計書（最新）
 ├── コンテンツ素材_準備フロー.md  # 素材準備の手順
 ├── cloud-run-app/               # 自動投稿システムのコード
 ├── terraform/                   # GCPインフラ設定
