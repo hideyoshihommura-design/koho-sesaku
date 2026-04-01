@@ -221,7 +221,8 @@
     <span class="badge">v4.4 2026-04-01 処理スケジュール確定</span>
     <span class="badge">v4.5 2026-04-01 素材検知詳細化</span>
     <span class="badge">v4.6 2026-04-01 AI生成詳細化</span>
-    <span class="badge current">v4.7 2026-04-01 現行</span>
+    <span class="badge">v4.7 2026-04-01 SNS投稿詳細化</span>
+    <span class="badge current">v4.8 2026-04-01 現行</span>
   </div>
 
   <!-- やりたいこと -->
@@ -747,6 +748,41 @@ flowchart TD
     </div>
   </div>
 
+  <!-- WordPress連携 -->
+  <div class="section">
+    <div class="section-title">⑦ WordPress お知らせ記事の自動作成</div>
+
+    <div class="highlight-box">
+      目的：<strong>SEO対策・更新頻度向上</strong>のためのシンプルなお知らせ投稿。<br>
+      担当者は下書きを確認して「公開」ボタンを押すだけ。
+    </div>
+
+    <div style="margin-bottom:24px">
+      <div style="font-size:0.88rem;font-weight:bold;color:#7dd3fc;margin-bottom:12px;">下書き作成のタイミング</div>
+      <div style="background:#0f1117;border:1px solid #334155;border-radius:8px;padding:16px;font-size:0.85rem;color:#e2e8f0;line-height:1.8;">
+        「投稿する」にしたSNSが<strong>すべて投稿完了</strong>した時点で下書きを自動作成<br>
+        <span style="color:#64748b">※ 本文に実際に投稿したSNSを正確に反映するため</span>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:0.88rem;font-weight:bold;color:#7dd3fc;margin-bottom:12px;">自動作成される下書きの内容</div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>項目</th><th>内容</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>タイトル</td><td>【SNS更新】＋素材のコメントから拠点名・内容を抜粋して自動生成</td></tr>
+            <tr><td>本文</td><td>実際に投稿したSNS名を自動反映 ＋ 投稿した画像を挿入</td></tr>
+            <tr><td>カテゴリ</td><td>お知らせ（固定）</td></tr>
+            <tr><td>ステータス</td><td>下書き（担当者が確認して公開）</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <!-- 実装フェーズ -->
   <div class="section">
     <div class="section-title">実装フェーズ</div>
@@ -871,7 +907,7 @@ flowchart TD
   </div>
 
   <footer>
-    SNS自動投稿システム 計画図 v4.7 — 最終更新: 2026-04-01
+    SNS自動投稿システム 計画図 v4.8 — 最終更新: 2026-04-01
   </footer>
 
   <script>
