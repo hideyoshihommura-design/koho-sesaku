@@ -223,7 +223,8 @@
     <span class="badge">v4.6 2026-04-01 AI生成詳細化</span>
     <span class="badge">v4.7 2026-04-01 SNS投稿詳細化</span>
     <span class="badge">v4.8 2026-04-01 WordPress連携確定</span>
-    <span class="badge current">v4.9 2026-04-01 現行</span>
+    <span class="badge">v4.9 2026-04-01 肖像権対応</span>
+    <span class="badge current">v5.0 2026-04-01 現行</span>
   </div>
 
   <!-- やりたいこと -->
@@ -911,13 +912,37 @@ flowchart TD
             <td><span class="tag tag-mid">中</span></td>
             <td><span class="tag tag-high">未対応</span></td>
           </tr>
+          <tr>
+            <td>コスト管理</td>
+            <td>フェーズ1〜2は動画生成なしでテスト運用。コスト確認後に段階的に有効化</td>
+            <td><span class="tag tag-high">高</span></td>
+            <td><span class="tag tag-done">方針決定済み</span></td>
+          </tr>
+          <tr>
+            <td>重複投稿防止</td>
+            <td>処理済みフォルダへの自動移動で対応（設計済み）</td>
+            <td><span class="tag tag-high">高</span></td>
+            <td><span class="tag tag-done">決定済み</span></td>
+          </tr>
+          <tr>
+            <td>障害時の手動運用</td>
+            <td>エラー通知を受けて従来の手動運用に切り替え</td>
+            <td><span class="tag tag-high">高</span></td>
+            <td><span class="tag tag-done">決定済み</span></td>
+          </tr>
+          <tr>
+            <td>APIレート制限</td>
+            <td>制限到達時はエラー通知で対応。現状の件数（1日12〜20件）では問題なし</td>
+            <td><span class="tag tag-mid">中</span></td>
+            <td><span class="tag tag-done">決定済み</span></td>
+          </tr>
         </tbody>
       </table>
     </div>
   </div>
 
   <footer>
-    SNS自動投稿システム 計画図 v4.9 — 最終更新: 2026-04-01
+    SNS自動投稿システム 計画図 v5.0 — 最終更新: 2026-04-01
   </footer>
 
   <script>
