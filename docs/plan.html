@@ -219,7 +219,8 @@
     <span class="badge">v4.2 2026-04-01 承認フロー確定</span>
     <span class="badge">v4.3 2026-04-01 承認フロー・素材投入確定</span>
     <span class="badge">v4.4 2026-04-01 処理スケジュール確定</span>
-    <span class="badge current">v4.5 2026-04-01 現行</span>
+    <span class="badge">v4.5 2026-04-01 素材検知詳細化</span>
+    <span class="badge current">v4.6 2026-04-01 現行</span>
   </div>
 
   <!-- やりたいこと -->
@@ -462,17 +463,56 @@ flowchart LR
     </div>
   </div>
 
-  <!-- SNS投稿文生成プロンプト -->
+  <!-- AIコンテンツ生成 -->
   <div class="section">
-    <div class="section-title">③ SNS投稿文生成プロンプト設計</div>
-    <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:20px;">
-      <code style="background:#1e293b;padding:2px 8px;border-radius:4px;color:#7dd3fc;">draft-content</code> スキルの構造をベースに、Cloud Runアプリ用のプロンプトを設計する。
+    <div class="section-title">③ AI によるコンテンツ生成</div>
+
+    <div style="margin-bottom:24px">
+      <div style="font-size:0.88rem;font-weight:bold;color:#7dd3fc;margin-bottom:12px;">動画生成</div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>素材</th><th>処理</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>写真のみ</td><td>Veo（Google）でリール動画を新規生成</td></tr>
+            <tr><td>動画あり</td><td>元動画をベースに長さ・縦型形式に調整（SNSごとの推奨時間に合わせる）</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
+    <div style="margin-bottom:24px">
+      <div style="font-size:0.88rem;font-weight:bold;color:#7dd3fc;margin-bottom:12px;">画像複数枚の扱い</div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>SNS</th><th>扱い</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Facebook</td><td>複数枚そのまま使う（複数枚投稿に対応）</td></tr>
+            <tr><td>Instagram</td><td>複数枚そのまま使う（カルーセル投稿に対応）</td></tr>
+            <tr><td>TikTok</td><td>動画を生成するため画像枚数は関係なし</td></tr>
+            <tr><td>X</td><td>最大4枚まで（5枚以上の場合はClaudeが自動選択）</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="margin-bottom:24px">
+      <div style="font-size:0.88rem;font-weight:bold;color:#7dd3fc;margin-bottom:12px;">生成失敗時</div>
+      <div style="background:#0f1117;border:1px solid #334155;border-radius:8px;padding:16px;font-size:0.85rem;color:#e2e8f0;line-height:1.8;">
+        自動で再試行 → 再試行後もダメな場合は担当者にエラー通知<br>
+        <span style="color:#64748b">※ その素材はスキップせず担当者の判断を待つ</span>
+      </div>
+    </div>
+
+    <div style="margin-bottom:24px">
+      <div style="font-size:0.88rem;font-weight:bold;color:#7dd3fc;margin-bottom:12px;">投稿文生成（Claude API）</div>
     <div class="mermaid">
 flowchart LR
     A["コメント\n担当者の説明・指示"]
-    B["画像解析結果\nClaudeが画像を説明"]
+    B["画像・動画の解析結果\nClaudeが内容を読み取り"]
     C["Claude API\nプロンプトに組み込み"]
     D["Facebook投稿文\n300文字以内\n絵文字・CTA・ハッシュタグ"]
     E["Instagram投稿文\n150文字以内\n絵文字・ハッシュタグ多め"]
@@ -493,6 +533,8 @@ flowchart LR
     style E fill:#1a1a3e,color:#a5b4fc,stroke:#6366f1
     style F fill:#1a1a3e,color:#a5b4fc,stroke:#6366f1
     style G fill:#1a1a3e,color:#a5b4fc,stroke:#6366f1
+    </div>
+      <div style="font-size:0.8rem;color:#64748b;margin-top:12px;">※ プロンプト設計の詳細（文体・トーン・禁止事項など）は担当者と要確認</div>
     </div>
 
     <div style="margin-top:24px">
@@ -793,7 +835,7 @@ flowchart TD
   </div>
 
   <footer>
-    SNS自動投稿システム 計画図 v4.5 — 最終更新: 2026-04-01
+    SNS自動投稿システム 計画図 v4.6 — 最終更新: 2026-04-01
   </footer>
 
   <script>
