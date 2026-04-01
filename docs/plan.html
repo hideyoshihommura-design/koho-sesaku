@@ -222,7 +222,8 @@
     <span class="badge">v4.5 2026-04-01 素材検知詳細化</span>
     <span class="badge">v4.6 2026-04-01 AI生成詳細化</span>
     <span class="badge">v4.7 2026-04-01 SNS投稿詳細化</span>
-    <span class="badge current">v4.8 2026-04-01 現行</span>
+    <span class="badge">v4.8 2026-04-01 WordPress連携確定</span>
+    <span class="badge current">v4.9 2026-04-01 現行</span>
   </div>
 
   <!-- やりたいこと -->
@@ -599,6 +600,9 @@ flowchart TD
     D{"3日後も\n未対応?"}
     E["Google Chat Bot\nリマインダー再通知"]
     F["担当者がスプレッドシートを開いて\n内容確認・セルを直接修正"]
+    F2{"肖像権確認\n「顔出し記載」列をチェック"}
+    F3["記載あり or 問題なし\n→ そのまま承認へ"]
+    F4["加工が必要\n→ 画像をスタンプ処理して差し替え"]
     G["SNSごとに判断\n「投稿する」「投稿しない」ボタン"]
     H["「投稿する」にしたSNSのみ\n自動投稿"]
     I["「投稿しない」\n→ 行は削除せず履歴として保持"]
@@ -606,7 +610,9 @@ flowchart TD
     A --> B --> C --> D
     D -- はい --> E --> F
     D -- いいえ --> F
-    F --> G
+    F --> F2
+    F2 --> F3 --> G
+    F2 --> F4 --> G
     G -- 投稿する --> H
     G -- 投稿しない --> I
 
@@ -616,6 +622,9 @@ flowchart TD
     style D fill:#1e293b,color:#e2e8f0,stroke:#94a3b8
     style E fill:#2d1a00,color:#fcd34d,stroke:#f59e0b
     style F fill:#2d1a00,color:#fcd34d,stroke:#f59e0b
+    style F2 fill:#1e293b,color:#e2e8f0,stroke:#94a3b8
+    style F3 fill:#1a2e1a,color:#86efac,stroke:#22c55e
+    style F4 fill:#78350f,color:#fcd34d,stroke:#f59e0b
     style G fill:#2d1a00,color:#fcd34d,stroke:#f59e0b
     style H fill:#1a1a3e,color:#a5b4fc,stroke:#6366f1
     style I fill:#1e293b,color:#94a3b8,stroke:#475569
@@ -649,6 +658,7 @@ flowchart TD
             <tr><td>生成日時</td><td>いつ生成されたか</td></tr>
             <tr><td>素材フォルダ名</td><td>どの素材から生成したか（例：001_20260401_0912）</td></tr>
             <tr><td>拠点</td><td>コメントからClaudeが自動検出（不明の場合は手動入力）</td></tr>
+            <tr><td>顔出し記載</td><td>コメントに「顔出しOK」等の記載があったか自動表示（担当者が加工要否を判断）</td></tr>
             <tr><td>Facebook投稿文</td><td>生成されたテキスト（セルを直接編集して修正可）</td></tr>
             <tr><td>Facebook</td><td>投稿する／投稿しない（ボタン）</td></tr>
             <tr><td>Instagram投稿文</td><td>生成されたテキスト（修正可）</td></tr>
@@ -907,7 +917,7 @@ flowchart TD
   </div>
 
   <footer>
-    SNS自動投稿システム 計画図 v4.8 — 最終更新: 2026-04-01
+    SNS自動投稿システム 計画図 v4.9 — 最終更新: 2026-04-01
   </footer>
 
   <script>
