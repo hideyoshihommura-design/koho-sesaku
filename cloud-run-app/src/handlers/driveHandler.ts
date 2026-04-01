@@ -5,6 +5,8 @@ import { google } from 'googleapis';
 import { logger } from '../utils/logger';
 import { getSecret, SECRET_NAMES } from '../utils/secretManager';
 
+// Drive フォルダ ID は Secret Manager から取得（フォルダ ID だけは設定が必要）
+
 export interface AttachmentRef {
   resourceName?: string;    // Google Chat attachment resource name
   driveFileId?: string;     // Google Drive file ID（Chat が Drive に保存した場合）
@@ -23,16 +25,11 @@ export interface MaterialMetadata {
   driveImageFileIds?: string[];  // Drive に保存した画像ファイルの ID
 }
 
-// Google Drive クライアントを初期化（サービスアカウント認証）
+// Google Drive クライアントを初期化（Workload Identity / ADC で自動認証）
+// Cloud Run に付与したサービスアカウントの権限が自動で使われる
 async function getDriveClient() {
-  const saJson = await getSecret(SECRET_NAMES.GOOGLE_SERVICE_ACCOUNT);
-  const credentials = JSON.parse(saJson);
-
   const auth = new google.auth.GoogleAuth({
-    credentials,
-    scopes: [
-      'https://www.googleapis.com/auth/drive',
-    ],
+    scopes: ['https://www.googleapis.com/auth/drive'],
   });
 
   return google.drive({ version: 'v3', auth });

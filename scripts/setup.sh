@@ -35,6 +35,7 @@ gcloud services enable \
   firestore.googleapis.com \
   drive.googleapis.com \
   chat.googleapis.com \
+  aiplatform.googleapis.com \
   artifactregistry.googleapis.com \
   cloudbuild.googleapis.com \
   --project="$PROJECT_ID"
@@ -64,6 +65,7 @@ gcloud iam service-accounts create "$SA_NAME" \
 for ROLE in \
   roles/secretmanager.secretAccessor \
   roles/datastore.user \
+  roles/aiplatform.user \
   roles/logging.logWriter; do
   gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --member="serviceAccount:${SA_EMAIL}" \
@@ -91,7 +93,7 @@ gcloud run deploy sns-auto-post \
   --image="$IMAGE_URL" \
   --region="$REGION" \
   --service-account="$SA_EMAIL" \
-  --set-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT_ID}" \
+  --set-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT_ID},VERTEX_REGION=us-east5,CLOUD_RUN_URL=https://sns-auto-post-${PROJECT_ID}.a.run.app" \
   --cpu=1 \
   --memory=512Mi \
   --timeout=300 \
