@@ -285,7 +285,7 @@ flowchart TD
     A["① 現場スタッフが既存のGoogle Chatグループに\n写真＋コメントを送る（今と同じ操作）"]
     B["Google Chat Bot\nメッセージを受信"]
     C["② Google Drive\n投稿素材_キュー/ に自動保存\nフォルダ・番号は自動付与"]
-    D["Cloud Scheduler\n毎朝 9:00 自動起動"]
+    D["Cloud Scheduler\n1日2回自動起動\n18:00・23:00"]
     E["Cloud Run\nメインアプリ"]
     F["③ Claude API\n各SNS用の投稿文を生成"]
     G["Veo / Vertex AI\nリール動画を生成"]
