@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SNS自動投稿システム 計画図 v4.3</title>
+  <title>SNS自動投稿システム 計画図 v6.0</title>
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -209,7 +209,7 @@
 <body>
 
   <h1>SNS自動投稿システム</h1>
-  <p class="subtitle">Google Chat → AI生成 → スプレッドシート承認 → 全SNS自動投稿 → WordPress お知らせ更新</p>
+  <p class="subtitle">Google Chat → GCS保存 → AI生成（Claude + Remotion）→ Webアプリ承認 → 全SNS自動投稿 → WordPress お知らせ更新</p>
 
   <div class="version-badge">
     <span class="badge">v1〜v3 2026-03-07</span>
@@ -224,7 +224,8 @@
     <span class="badge">v4.7 2026-04-01 SNS投稿詳細化</span>
     <span class="badge">v4.8 2026-04-01 WordPress連携確定</span>
     <span class="badge">v4.9 2026-04-01 肖像権対応</span>
-    <span class="badge current">v5.0 2026-04-01 現行</span>
+    <span class="badge">v5.0 2026-04-01 Workload Identity移行</span>
+    <span class="badge current">v6.0 2026-04-02 Drive廃止・GCS統一・Remotion動画</span>
   </div>
 
   <!-- やりたいこと -->
@@ -232,8 +233,8 @@
     <div class="section-title">やりたいこと</div>
     <div class="highlight-box">
       現場スタッフが<strong>今と同じ操作（Google Chatに写真＋コメントを送るだけ）</strong>で、<br>
-      AI が各SNS用の投稿文・リール動画を自動生成。<br>
-      広報担当者がGoogleスプレッドシートで確認・修正し、SNSごとに承認したら自動投稿。<br>
+      AI が各SNS用の投稿文と字幕・BGM付きスライドショー動画を自動生成。<br>
+      広報担当者が<strong>承認用Webアプリ</strong>で確認・修正し、SNSごとに承認したら自動投稿。<br>
       投稿後は WordPress のお知らせに下書きを自動作成する。
     </div>
   </div>
@@ -251,27 +252,27 @@
       <div class="step">
         <div class="step-num">②</div>
         <div class="step-title">自動保存・起動</div>
-        <div class="step-desc">BotがGoogle Driveに自動保存。1日2回（18:00・23:00）システムが起動して素材を取り込む</div>
+        <div class="step-desc">BotがGCS（Cloud Storage）に自動保存 ＋ Firestoreに登録。1日2回（18:00・23:00）システムが起動して素材を取り込む</div>
       </div>
       <div class="step">
         <div class="step-num">③</div>
         <div class="step-title">AI生成</div>
-        <div class="step-desc">ClaudeがSNS用投稿文を生成。VeoがInstagram・TikTok用リール動画を生成</div>
+        <div class="step-desc">Claude（Vertex AI）がSNS用投稿文を生成。Remotionが字幕・BGM付きスライドショー動画を生成（無料）</div>
       </div>
       <div class="step">
         <div class="step-num">④</div>
         <div class="step-title">確認通知</div>
-        <div class="step-desc">Google Chat Botがスプレッドシートのリンクを通知。3日放置でリマインダー再通知</div>
+        <div class="step-desc">Google Chat BotがWebアプリのリンクを通知。3日放置でリマインダー再通知</div>
       </div>
       <div class="step">
         <div class="step-num">⑤</div>
         <div class="step-title">確認・承認</div>
-        <div class="step-desc">スプレッドシートで内容確認・修正し、SNSごとに「投稿する」「投稿しない」を選択</div>
+        <div class="step-desc">承認用Webアプリで投稿文・動画を確認・修正し、SNSごとに「承認」を選択</div>
       </div>
       <div class="step">
         <div class="step-num">⑥</div>
         <div class="step-title">SNS投稿</div>
-        <div class="step-desc">「投稿する」にしたSNSのみ自動投稿。履歴はスプレッドシートに残る</div>
+        <div class="step-desc">承認したSNSのみ自動投稿。状態はFirestoreで管理</div>
       </div>
       <div class="step">
         <div class="step-num">⑦</div>
@@ -284,15 +285,15 @@
 flowchart TD
     A["① 現場スタッフが既存のGoogle Chatグループに\n写真＋コメントを送る（今と同じ操作）"]
     B["Google Chat Bot\nメッセージを受信"]
-    C["② Google Drive\n投稿素材_キュー/ に自動保存\nフォルダ・番号は自動付与"]
+    C["② GCS（Cloud Storage）に写真を保存\nFirestoreに素材レコード登録\n（生成待ち状態）"]
     D["Cloud Scheduler\n1日2回自動起動\n18:00・23:00"]
     E["Cloud Run\nメインアプリ"]
-    F["③ Claude API\n各SNS用の投稿文を生成"]
-    G["Veo / Vertex AI\nリール動画を生成"]
-    H["Googleスプレッドシート\n投稿文・動画URLを自動書き出し"]
-    I["④ Google Chat Bot\nスプレッドシートのリンクを通知\n（3日後リマインダーあり）"]
-    J["⑤ 担当者がスプレッドシートで\n内容確認・修正"]
-    K["SNSごとに\n「投稿する」「投稿しない」を選択"]
+    F["③ Claude Haiku（Vertex AI）\n各SNS用の投稿文を生成"]
+    G["Remotion（無料）\n字幕・BGM付きスライドショー動画\n縦型9:16・約20秒・H.264"]
+    H["GCS\n生成動画を保存\nFirestoreに結果を記録"]
+    I["④ Google Chat Bot\nWebアプリのリンクを通知\n（3日後リマインダーあり）"]
+    J["⑤ 担当者が承認Webアプリで\n投稿文・動画を確認・修正"]
+    K["SNSごとに「承認」を選択"]
     L["⑥ 「投稿する」にしたSNSのみ自動投稿"]
     M["Facebook\nMeta Graph API"]
     N["Instagram\nMeta Graph API"]
@@ -335,16 +336,14 @@ flowchart TD
     <div class="mermaid">
 graph TB
     subgraph GCP["Google Cloud Platform"]
-        CS["Cloud Scheduler\n毎朝9:00"]
-        CR["Cloud Run\nNode.js / TypeScript"]
-        GCS["Cloud Storage\n生成動画の保存"]
-        SM["Secret Manager\nAPIキー管理"]
-        VA["Vertex AI / Veo\n動画生成"]
+        CS["Cloud Scheduler\n18:00・23:00"]
+        CR["Cloud Run\nNode.js / TypeScript\nCPU:2 / メモリ:2GB"]
+        GCS["Cloud Storage\n素材画像 + 生成動画を統一管理\nmaterials/ videos/"]
+        FS["Firestore\n素材・承認状態の管理"]
+        SM["Secret Manager\nAPIキー管理（3件のみ）"]
+        VA["Vertex AI\nClaude Haiku 投稿文生成\nWorkload Identity認証"]
         CL["Cloud Logging"]
-    end
-
-    subgraph AI["AI"]
-        CA["Claude API\n投稿文生成"]
+        RM["Remotion（無料）\nスライドショー動画生成\n字幕・BGM付き 縦型9:16"]
     end
 
     subgraph SNS["SNS"]
@@ -354,9 +353,8 @@ graph TB
     end
 
     subgraph Google["Google Workspace"]
-        GD["Google Drive\n素材フォルダ"]
         GC["Google Chat Bot\n素材受信・通知"]
-        SS["Googleスプレッドシート\n承認・履歴管理"]
+        WA["承認用Webアプリ\n投稿文・動画プレビュー・承認"]
     end
 
     subgraph Other["その他"]
@@ -364,19 +362,18 @@ graph TB
     end
 
     CS --> CR
+    GC --> CR
     CR --> GCS
+    CR --> FS
     CR --> VA
+    CR --> RM
     SM --> CR
     CR --> CL
-    CR --> CA
-    CR --> GD
-    CR --> SS
-    GC --> GD
-    GC --> SS
     CR --> META
     CR --> TT
     CR --> XA
     CR --> WP
+    CR --> WA
     </div>
   </div>
 
@@ -397,31 +394,25 @@ flowchart LR
 
     subgraph Bot["Google Chat Bot（自動）"]
         B1["メッセージを受信"]
-        B2["Google Driveに\nフォルダを自動作成\n001_20260401_0912/"]
-        B3["写真・コメントを保存"]
+        B2["GCS（Cloud Storage）に\n写真・動画を保存\nmaterials/日付/materialId/"]
+        B3["Firestoreに素材レコードを登録\n（generationStatus: pending）"]
     end
 
-    subgraph Queue["投稿素材_キュー/（Google Drive）"]
-        F1["📁 001_20260401_0912\n├ 写真.jpg\n└ コメント.txt"]
-        F2["📁 002_20260401_1034\n├ 写真1.jpg\n├ 写真2.jpg\n└ コメント.txt"]
-    end
-
-    subgraph Done["処理済み/"]
-        D1["✅ 001_20260401_0912\n（自動移動）"]
+    subgraph GCS["GCS バケット（sns-videos）"]
+        F1["📁 materials/2026-04-02/abc123/\n├ 1.jpg\n└ 2.jpg"]
+        F2["📁 videos/\n└ abc123.mp4（生成後）"]
     end
 
     S1 --> B1 --> B2 --> B3
-    B3 --> F1
-    F1 -- 処理完了後 --> D1
-    F2 -- 翌日以降に処理 --> F2
+    B2 --> F1
+    B3 -- 生成完了後 --> F2
 
     style S1 fill:#1e3a5f,color:#93c5fd,stroke:#3b82f6
     style B1 fill:#1e293b,color:#94a3b8,stroke:#475569
     style B2 fill:#1e293b,color:#94a3b8,stroke:#475569
     style B3 fill:#1e293b,color:#94a3b8,stroke:#475569
     style F1 fill:#1e3a2e,color:#6ee7b7,stroke:#10b981
-    style F2 fill:#1e293b,color:#94a3b8,stroke:#475569
-    style D1 fill:#1a2e2e,color:#67e8f9,stroke:#06b6d4
+    style F2 fill:#1a2e2e,color:#67e8f9,stroke:#06b6d4
     </div>
 
     <div style="margin-top:24px">
@@ -442,8 +433,8 @@ flowchart LR
     <div style="margin-bottom:24px">
       <div style="font-size:0.88rem;font-weight:bold;color:#7dd3fc;margin-bottom:12px;">Google Chat Bot による自動保存（リアルタイム）</div>
       <div class="highlight-box">
-        現場スタッフがメッセージを送った<strong>瞬間</strong>にBotが検知し、Google Driveに自動保存。<br>
-        既存のGoogle Chatや業務システムへの負担はなし。BotはCloud Run上で動作（追加コストはほぼゼロ）。
+        現場スタッフがメッセージを送った<strong>瞬間</strong>にBotが検知し、<strong>GCS（Cloud Storage）</strong>に自動保存。<br>
+        Firestoreに素材情報を登録（生成待ち状態）。BotはCloud Run上で動作（追加コストはほぼゼロ）。
       </div>
     </div>
 
@@ -472,32 +463,35 @@ flowchart LR
     <div class="section-title">③ AI によるコンテンツ生成</div>
 
     <div style="margin-bottom:24px">
-      <div style="font-size:0.88rem;font-weight:bold;color:#7dd3fc;margin-bottom:12px;">動画生成</div>
+      <div style="font-size:0.88rem;font-weight:bold;color:#7dd3fc;margin-bottom:12px;">動画生成：Remotion（無料・オープンソース）</div>
       <div class="table-wrapper">
         <table>
           <thead>
-            <tr><th>素材</th><th>処理</th></tr>
+            <tr><th>項目</th><th>仕様</th></tr>
           </thead>
           <tbody>
-            <tr><td>写真のみ</td><td>Veo（Google）でリール動画を新規生成</td></tr>
-            <tr><td>動画あり</td><td>元動画をベースに長さ・縦型形式に調整（SNSごとの推奨時間に合わせる）</td></tr>
+            <tr><td>形式</td><td>縦型 9:16（1080×1920）Instagram Reels・TikTok対応</td></tr>
+            <tr><td>内容</td><td>写真のスライドショー</td></tr>
+            <tr><td>1枚あたりの表示時間</td><td>5秒（フェード効果 0.5秒）</td></tr>
+            <tr><td>動画長さ（4枚の場合）</td><td>約20秒（推奨範囲内）</td></tr>
+            <tr><td>字幕</td><td>Instagram投稿文の本文を画面下部に表示</td></tr>
+            <tr><td>BGM</td><td>3種類からランダム選択（Dockerビルド時に自動生成）</td></tr>
           </tbody>
         </table>
       </div>
     </div>
 
     <div style="margin-bottom:24px">
-      <div style="font-size:0.88rem;font-weight:bold;color:#7dd3fc;margin-bottom:12px;">画像複数枚の扱い</div>
+      <div style="font-size:0.88rem;font-weight:bold;color:#7dd3fc;margin-bottom:12px;">BGMの種類（ffmpegで自動生成・手動作業なし）</div>
       <div class="table-wrapper">
         <table>
           <thead>
-            <tr><th>SNS</th><th>扱い</th></tr>
+            <tr><th>ファイル</th><th>和音</th><th>雰囲気</th></tr>
           </thead>
           <tbody>
-            <tr><td>Facebook</td><td>複数枚そのまま使う（複数枚投稿に対応）</td></tr>
-            <tr><td>Instagram</td><td>複数枚そのまま使う（カルーセル投稿に対応）</td></tr>
-            <tr><td>TikTok</td><td>動画を生成するため画像枚数は関係なし</td></tr>
-            <tr><td>X</td><td>最大4枚まで（5枚以上の場合はClaudeが自動選択）</td></tr>
+            <tr><td>bgm1.mp3</td><td>Cメジャー</td><td>明るい・爽やか</td></tr>
+            <tr><td>bgm2.mp3</td><td>Fメジャー</td><td>温かい・穏やか</td></tr>
+            <tr><td>bgm3.mp3</td><td>Aマイナー</td><td>落ち着き・やすらぎ</td></tr>
           </tbody>
         </table>
       </div>
@@ -595,12 +589,12 @@ flowchart LR
 
     <div class="mermaid">
 flowchart TD
-    A["AI生成完了\n投稿文・動画"]
-    B["Googleスプレッドシートに\n自動書き出し\n投稿文・動画URL・生成日時"]
-    C["Google Chat Bot が通知\n「生成が完了しました。確認してください」\n＋ スプレッドシートのリンク"]
+    A["AI生成完了\n投稿文・スライドショー動画"]
+    B["Firestoreに保存\n（generationStatus: generated）\n動画はGCSに保存"]
+    C["Google Chat Bot が通知\n「生成が完了しました。確認してください」\n＋ 承認WebアプリのURL"]
     D{"3日後も\n未対応?"}
     E["Google Chat Bot\nリマインダー再通知"]
-    F["担当者がスプレッドシートを開いて\n内容確認・セルを直接修正"]
+    F["担当者が承認Webアプリを開いて\n投稿文・動画を確認・修正"]
     F2{"肖像権確認\n「顔出し記載」列をチェック"}
     F3["記載あり or 問題なし\n→ そのまま承認へ"]
     F4["加工が必要\n→ 画像をスタンプ処理して差し替え"]
@@ -798,52 +792,50 @@ flowchart TD
   <div class="section">
     <div class="section-title">実装フェーズ</div>
     <div class="phase-list">
-      <div class="phase">
-        <div class="phase-num">Phase 1</div>
+      <div class="phase" style="border-left-color:#22c55e">
+        <div class="phase-num" style="color:#22c55e">✅ Phase 1</div>
         <div>
-          <div class="phase-name">GCP基盤構築（1週間）</div>
-          <div class="phase-detail">GCPプロジェクト作成・IAM設定 / 必要APIの有効化 / Secret Managerにキーを登録 / Cloud Run基本構成</div>
+          <div class="phase-name">GCP基盤構築（完了）</div>
+          <div class="phase-detail">GCPプロジェクト作成・IAM設定 / 必要APIの有効化 / Secret Manager登録スクリプト作成（3件のみ）/ Cloud Run基本構成</div>
+        </div>
+      </div>
+      <div class="phase" style="border-left-color:#22c55e">
+        <div class="phase-num" style="color:#22c55e">✅ Phase 2</div>
+        <div>
+          <div class="phase-name">コア機能実装（完了）</div>
+          <div class="phase-detail">
+            Google Chat Bot による素材受信（Webhook）/ GCSへの写真・動画の自動保存（Drive廃止）/ Firestoreへの素材レコード自動登録 /
+            Claude Haiku（Vertex AI）による投稿文生成 / Workload Identity認証（APIキー不要）/
+            Remotionによるスライドショー動画生成（Veo廃止・無料）― 縦型9:16・1枚5秒・字幕・BGM付き /
+            BGM自動生成（ffmpeg・3種類・Dockerビルド時）/ 生成動画のGCS保存
+          </div>
+        </div>
+      </div>
+      <div class="phase" style="border-left-color:#22c55e">
+        <div class="phase-num" style="color:#22c55e">✅ Phase 3</div>
+        <div>
+          <div class="phase-name">承認フロー実装（完了）</div>
+          <div class="phase-detail">Firestoreによる承認状態管理 / 承認用Webアプリ（秘密URLアクセス）/ 生成完了通知（Google Chat）/ 3日後リマインダー通知</div>
         </div>
       </div>
       <div class="phase">
-        <div class="phase-num">Phase 2</div>
+        <div class="phase-num">🔲 Phase 4</div>
         <div>
-          <div class="phase-name">コア機能実装（2週間）</div>
-          <div class="phase-detail">Google Driveから素材取得 / ClaudeによるSNS投稿文生成（draft-contentスキルベース） / SNS別プロンプトのチューニング / Googleスプレッドシートへの自動書き出し / Cloud Storageへの動画保存・URL管理</div>
-        </div>
-      </div>
-      <div class="phase">
-        <div class="phase-num">Phase 3</div>
-        <div>
-          <div class="phase-name">Google Chat Bot・承認フロー実装（1週間）</div>
-          <div class="phase-detail">Google Chat Bot の作成（素材受信 ＋ 通知） / 生成完了通知（スプレッドシートリンク付き） / スプレッドシートにSNSごとの「投稿する」「投稿しない」ボタンを実装 / 3日後リマインダー通知の実装 / 承認後の自動投稿トリガー</div>
-        </div>
-      </div>
-      <div class="phase">
-        <div class="phase-num">Phase 4</div>
-        <div>
-          <div class="phase-name">SNS投稿実装（1〜2週間）</div>
+          <div class="phase-name">SNS投稿実装（未着手）</div>
           <div class="phase-detail">Facebook・Instagram（Meta Graph API） / X（Twitter API v2） / TikTok（Content Posting API）</div>
         </div>
       </div>
       <div class="phase">
-        <div class="phase-num">Phase 5</div>
+        <div class="phase-num">🔲 Phase 5</div>
         <div>
-          <div class="phase-name">動画生成実装（1〜2週間）</div>
-          <div class="phase-detail">VeoによるリールAI動画生成 / Cloud Storageへの保存・管理</div>
-        </div>
-      </div>
-      <div class="phase">
-        <div class="phase-num">Phase 6</div>
-        <div>
-          <div class="phase-name">WordPress連携（1週間）</div>
+          <div class="phase-name">WordPress連携（未着手）</div>
           <div class="phase-detail">SNS投稿後にWordPressのお知らせへ下書きを自動作成</div>
         </div>
       </div>
       <div class="phase">
-        <div class="phase-num">Phase 7</div>
+        <div class="phase-num">🔲 Phase 6</div>
         <div>
-          <div class="phase-name">テスト・調整（1〜2週間）</div>
+          <div class="phase-name">テスト・調整（未着手）</div>
           <div class="phase-detail">全体通しテスト / プロンプト調整 / 本番運用開始</div>
         </div>
       </div>
@@ -908,21 +900,27 @@ flowchart TD
           </tr>
           <tr>
             <td>動画スタイル</td>
-            <td>Veoに指示するリール動画のスタイル</td>
+            <td>Remotion・縦型9:16・スライドショー・5秒/枚・字幕・BGM付き</td>
             <td><span class="tag tag-mid">中</span></td>
-            <td><span class="tag tag-high">未対応</span></td>
+            <td><span class="tag tag-done">決定済み・実装済み</span></td>
+          </tr>
+          <tr>
+            <td>素材保存先</td>
+            <td>GCS（Cloud Storage）に統一。Drive廃止</td>
+            <td><span class="tag tag-high">高</span></td>
+            <td><span class="tag tag-done">決定済み・実装済み</span></td>
           </tr>
           <tr>
             <td>コスト管理</td>
-            <td>フェーズ1〜2は動画生成なしでテスト運用。コスト確認後に段階的に有効化</td>
+            <td>Remotion採用により動画生成コストはゼロ。GCSの保存コストのみ</td>
             <td><span class="tag tag-high">高</span></td>
-            <td><span class="tag tag-done">方針決定済み</span></td>
+            <td><span class="tag tag-done">解決済み</span></td>
           </tr>
           <tr>
             <td>重複投稿防止</td>
-            <td>処理済みフォルダへの自動移動で対応（設計済み）</td>
+            <td>FirestoreのgenerationStatusで管理（pending→generated/failed）</td>
             <td><span class="tag tag-high">高</span></td>
-            <td><span class="tag tag-done">決定済み</span></td>
+            <td><span class="tag tag-done">決定済み・実装済み</span></td>
           </tr>
           <tr>
             <td>障害時の手動運用</td>
@@ -942,7 +940,7 @@ flowchart TD
   </div>
 
   <footer>
-    SNS自動投稿システム 計画図 v5.0 — 最終更新: 2026-04-01
+    SNS自動投稿システム 計画図 v6.0 — 最終更新: 2026-04-02
   </footer>
 
   <script>
