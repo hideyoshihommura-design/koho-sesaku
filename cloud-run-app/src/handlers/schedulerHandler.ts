@@ -78,7 +78,12 @@ async function processAllMaterials(): Promise<void> {
       let videoGcsPath: string | null = null;
       if (images.length > 0) {
         try {
-          videoGcsPath = await generateSlideshowVideo(material.materialId, images);
+          // Instagram 投稿文を字幕として使用
+          videoGcsPath = await generateSlideshowVideo(
+            material.materialId,
+            images,
+            generated.instagram
+          );
         } catch (videoErr) {
           // 動画生成に失敗しても投稿文は保存して続行
           logger.warn('動画生成をスキップします', {

@@ -11,14 +11,16 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="Slideshow"
         component={Slideshow}
-        durationInFrames={90}  // ビルド時のデフォルト値。実際は renderMedia で上書き
+        durationInFrames={150}  // ビルド時のデフォルト値。実際は renderMedia で上書き
         fps={30}
         width={1080}
         height={1920}
         defaultProps={
           {
             imageDataUrls: [],
-            frameDuration: 90,
+            captionText: '',
+            musicFile: 'bgm1.mp3',
+            frameDuration: 150,
             transitionFrames: 15,
           } satisfies SlideshowProps
         }

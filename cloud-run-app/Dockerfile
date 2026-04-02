@@ -18,10 +18,11 @@ RUN npm run build
 # ──────────────────────────────────
 FROM node:20-bookworm AS runner
 
-# Remotion レンダリングに必要な Chromium と ffmpeg をインストール
+# Remotion レンダリングに必要な Chromium・ffmpeg・日本語フォントをインストール
 RUN apt-get update && apt-get install -y \
     chromium \
     ffmpeg \
+    fonts-noto-cjk \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 

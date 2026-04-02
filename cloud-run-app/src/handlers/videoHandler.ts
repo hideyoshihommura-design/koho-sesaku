@@ -11,7 +11,6 @@ import { logger } from '../utils/logger';
 const storage = new Storage();
 
 // Docker ビルド時に生成した Remotion バンドルのパス
-// dist/handlers/videoHandler.js から見て dist/video-bundle/
 const BUNDLE_PATH = path.join(__dirname, '../video-bundle');
 
 // GCS バケット名（setup.sh で作成）
@@ -21,38 +20,55 @@ function getBucketName(): string {
   return `${project}-sns-videos`;
 }
 
+// BGM ファイル一覧（public/music/ に配置）
+const BGM_FILES = ['bgm1.mp3', 'bgm2.mp3', 'bgm3.mp3'];
+
+function pickBgm(): string {
+  return BGM_FILES[Math.floor(Math.random() * BGM_FILES.length)];
+}
+
 /**
  * 写真からスライドショー動画を生成して GCS に保存する
  *
  * @param materialId   素材ID（ファイル名に使用）
  * @param images       Drive からダウンロードした画像（base64）
+ * @param captionText  動画下部に表示する字幕テキスト（Instagram投稿文）
  * @returns GCS のオブジェクトパス（例: videos/XXXX.mp4）
  */
 export async function generateSlideshowVideo(
   materialId: string,
-  images: Array<{ base64: string; mimeType: string }>
+  images: Array<{ base64: string; mimeType: string }>,
+  captionText: string
 ): Promise<string> {
   if (images.length === 0) {
     throw new Error('動画生成には1枚以上の画像が必要です');
   }
 
-  const frameDuration = 90;    // 1枚あたり 3秒（30fps × 3）
+  const frameDuration = 150;   // 1枚あたり 5秒（30fps × 5）
   const transitionFrames = 15; // フェード 0.5秒
+  const musicFile = pickBgm();
 
   // base64 → data URL に変換（Remotion の Img コンポーネントに渡す）
   const imageDataUrls = images.map(
     (img) => `data:${img.mimeType};base64,${img.base64}`
   );
 
-  // 総フレーム数（最後の画像はフェードアウト不要のため -transitionFrames）
+  // 総フレーム数
   const totalFrames = images.length * frameDuration + transitionFrames;
 
-  const inputProps = { imageDataUrls, frameDuration, transitionFrames };
+  const inputProps = {
+    imageDataUrls,
+    captionText,
+    musicFile,
+    frameDuration,
+    transitionFrames,
+  };
 
   logger.info('動画生成を開始します', {
     materialId,
     imageCount: images.length,
     durationSec: Math.round(totalFrames / 30),
+    musicFile,
   });
 
   // Remotion の合成情報を取得（バンドルから）
