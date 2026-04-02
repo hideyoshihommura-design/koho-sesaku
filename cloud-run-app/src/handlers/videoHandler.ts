@@ -71,11 +71,18 @@ export async function generateSlideshowVideo(
     musicFile,
   });
 
+  const browserExecutable = process.env.CHROME_EXECUTABLE_PATH || '/usr/bin/chromium';
+
   // Remotion の合成情報を取得（バンドルから）
   const composition = await selectComposition({
     serveUrl: BUNDLE_PATH,
     id: 'Slideshow',
     inputProps,
+    browserExecutable,
+    chromiumOptions: {
+      gl: 'swangle',
+      disableWebSecurity: true,
+    },
   });
 
   // durationInFrames を画像枚数に合わせて上書き
@@ -90,10 +97,9 @@ export async function generateSlideshowVideo(
     codec: 'h264',
     outputLocation: tmpPath,
     inputProps,
-    // Cloud Run（コンテナ）向けの Chromium 設定
-    browserExecutable: process.env.CHROME_EXECUTABLE_PATH || '/usr/bin/chromium',
+    browserExecutable,
     chromiumOptions: {
-      gl: 'swangle', // ソフトウェアレンダリング（GPU なし環境向け）
+      gl: 'swangle',
       disableWebSecurity: true,
     },
   });
