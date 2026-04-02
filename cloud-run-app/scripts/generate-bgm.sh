@@ -27,7 +27,6 @@ ffmpeg -y -loglevel error \
     [2]volume=0.16[c];
     [3]volume=0.10[d];
     [a][b][c][d]amix=inputs=4:normalize=0,
-    atremolo=f=0.8:d=0.25,
     aecho=0.8:0.7:80:0.35,
     afade=t=in:st=0:d=3,
     afade=t=out:st=27:d=3
@@ -49,7 +48,6 @@ ffmpeg -y -loglevel error \
     [2]volume=0.16[c];
     [3]volume=0.08[d];
     [a][b][c][d]amix=inputs=4:normalize=0,
-    atremolo=f=0.6:d=0.20,
     aecho=0.8:0.8:120:0.45,
     afade=t=in:st=0:d=4,
     afade=t=out:st=26:d=4
@@ -71,7 +69,6 @@ ffmpeg -y -loglevel error \
     [2]volume=0.15[c];
     [3]volume=0.10[d];
     [a][b][c][d]amix=inputs=4:normalize=0,
-    atremolo=f=0.4:d=0.30,
     aecho=0.9:0.8:150:0.50,
     afade=t=in:st=0:d=5,
     afade=t=out:st=25:d=5
