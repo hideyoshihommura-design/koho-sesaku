@@ -89,6 +89,28 @@ gcloud storage buckets create "gs://${VIDEO_BUCKET}" \
 echo "✅ 完了"
 
 # ──────────────────────────────────────────────
+# Step 3c: Firestore インデックス作成
+# ──────────────────────────────────────────────
+echo ""
+echo "▶ Firestore インデックスを作成中..."
+if command -v firebase &>/dev/null; then
+  firebase deploy --only firestore:indexes --project="$PROJECT_ID" 2>/dev/null || echo "  （firebase CLI でのデプロイをスキップ）"
+else
+  echo "  firebase CLI が未インストールのため gcloud で代替作成します"
+  gcloud firestore indexes composite create \
+    --collection-group=materials \
+    --field-config=field-path=generationStatus,order=ascending \
+    --field-config=field-path=receivedAt,order=ascending \
+    --project="$PROJECT_ID" --quiet 2>/dev/null || echo "  （既に存在します）"
+  gcloud firestore indexes composite create \
+    --collection-group=materials \
+    --field-config=field-path=generationStatus,order=ascending \
+    --field-config=field-path=receivedAt,order=descending \
+    --project="$PROJECT_ID" --quiet 2>/dev/null || echo "  （既に存在します）"
+fi
+echo "✅ 完了"
+
+# ──────────────────────────────────────────────
 # Step 4: Dockerイメージをビルド＆プッシュ
 # ──────────────────────────────────────────────
 echo ""

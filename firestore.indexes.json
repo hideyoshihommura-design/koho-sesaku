@@ -1,0 +1,21 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "materials",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "generationStatus", "order": "ASCENDING" },
+        { "fieldPath": "receivedAt",       "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "materials",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "generationStatus", "order": "ASCENDING" },
+        { "fieldPath": "receivedAt",       "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
