@@ -10,7 +10,7 @@ export const RemotionRoot: React.FC = () => {
       {/* 縦型 9:16（Instagram Reels / TikTok 推奨サイズ） */}
       <Composition
         id="Slideshow"
-        component={Slideshow}
+        component={Slideshow as unknown as React.ComponentType<Record<string, unknown>>}
         durationInFrames={150}  // ビルド時のデフォルト値。実際は renderMedia で上書き
         fps={30}
         width={1080}

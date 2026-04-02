@@ -7,7 +7,12 @@ import { GoogleAuth } from 'google-auth-library';
 import { logger } from '../utils/logger';
 import { withRetry, isRetryableHttpError } from '../utils/retry';
 import { buildSnsPrompt, SnsGenerationOutput } from '../prompts/snsPrompt';
-import { MaterialMetadata } from './driveHandler';
+// generateSnsPost が使用するフィールドのみ定義（storageHandler / firestoreHandler と互換）
+interface MaterialInput {
+  materialId: string;
+  comment: string;
+  photoCount: number;
+}
 
 // Vertex AI 上の Claude Haiku モデル ID
 const VERTEX_MODEL = 'claude-haiku-4-5@20251001';
@@ -74,7 +79,7 @@ async function callClaude(
 
 // 1件の素材から SNS 投稿文を生成
 export async function generateSnsPost(
-  metadata: MaterialMetadata,
+  metadata: MaterialInput,
   images: Array<{ base64: string; mimeType: string }>
 ): Promise<SnsGenerationOutput> {
   const prompt = buildSnsPrompt({
