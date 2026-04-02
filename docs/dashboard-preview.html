@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SNS投稿 承認ダッシュボード（プレビュー）</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    textarea { resize: vertical; }
+    .status-pending  { background:#FEF3C7; color:#92400E; }
+    .status-approved { background:#D1FAE5; color:#065F46; }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <datalist id="branch-list"><option value="あおぞら博多"><option value="七福の里"><option value="下荒田"><option value="東千石"><option value="梅ヶ丘"></datalist>
+
+  <!-- プレビュー注意バナー -->
+  <div class="bg-blue-600 text-white text-center text-sm py-2">
+    📋 これはプレビュー用のモックデータです。ボタンの保存・承認はデモ動作のみ（実際のDBには書き込みません）
+  </div>
+
+  <header class="bg-white shadow sticky top-0 z-10">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-2">
+      <h1 class="text-lg font-bold text-gray-800">SNS投稿 承認ダッシュボード</h1>
+      <div class="flex items-center gap-3 text-sm flex-wrap">
+        <span class="text-gray-500">未承認: <span class="font-bold text-orange-500">2件</span></span>
+        <span class="text-yellow-500 font-medium">⏳ 生成中: 1件</span>
+        <button onclick="location.reload()" class="text-xs px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 border">🔄 更新</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-6 space-y-6">
+    
+  <div class="bg-white rounded-xl shadow p-5 border-l-4 border-yellow-400">
+    <div class="flex items-center gap-3">
+      <span class="text-yellow-500 text-xl">⏳</span>
+      <div>
+        <p class="font-semibold text-gray-700">鈴木 一郎 ・ 写真2枚</p>
+        <p class="text-xs text-gray-400">4/2 10:30 ・ AI生成中...</p>
+        <p class="text-xs text-gray-500 mt-1">東千石 昼食の様子です</p>
+      </div>
+    </div>
+  </div>
+    
+  <div class="bg-white rounded-xl shadow p-5 space-y-4">
+    <div class="space-y-1">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span id="branch-label-mock-001" class="font-bold text-gray-800">あおぞら博多</span>
+        <button onclick="editBranch('mock-001')" class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-500 hover:bg-gray-200">✏️ 修正</button>
+        <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">顔出しOK記載あり</span>
+      </div>
+      <div id="branch-edit-mock-001" class="hidden gap-2 items-center mt-1">
+        <input id="branch-input-mock-001" type="text" list="branch-list"
+          value="あおぞら博多" placeholder="例: あおぞら博多"
+          class="text-sm border rounded px-2 py-1 w-48">
+        <button onclick="saveBranch('mock-001', this)" class="text-xs px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700">保存</button>
+        <button onclick="cancelBranchEdit('mock-001')" class="text-xs px-3 py-1 rounded bg-gray-200 text-gray-600 hover:bg-gray-300">キャンセル</button>
+      </div>
+      <p class="text-xs text-gray-500">4/1 09:30 ・ 田中 花子 ・ 写真3枚</p>
+      <p class="text-sm text-gray-700 bg-gray-50 rounded p-2 mt-1">あおぞら博多 本日の折り紙レクリエーションの様子です！皆さんとても楽しそうでした。顔出しOK</p>
+    </div>
+    <div class="flex justify-end">
+      <button id="approve-all-btn-mock-001" onclick="approveAll('mock-001', this)"
+        
+        class="text-sm px-4 py-2 rounded text-white font-medium bg-indigo-600 hover:bg-indigo-700">
+        ✅ 全て承認
+      </button>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      
+    <div class="border rounded-lg p-4 space-y-2">
+      <div class="flex items-center gap-2">
+        <span class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center flex-shrink-0" style="background:#1877F2">F</span>
+        <span class="font-semibold text-sm">Facebook</span>
+        <span id="status-mock-001-facebook" class="text-xs px-2 py-0.5 rounded-full status-pending">
+          ⏳ 未承認
+        </span>
+      </div>
+      <textarea id="text-mock-001-facebook" class="w-full text-sm border rounded p-2 bg-gray-50 min-h-[80px]">あおぞら博多では、本日も賑やかな折り紙レクリエーションが行われました✨
+利用者様が色とりどりの折り紙を手に、笑顔で取り組まれている様子が印象的でした。
+日々の活動を通して、皆様の生き生きとした姿が私たちのやりがいです😊
+
+#あおぞら博多 #介護 #デイサービス #レクリエーション #折り紙</textarea>
+      <div class="flex gap-2">
+        <button onclick="saveEdit('mock-001','facebook',this)" class="text-xs px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-700">保存</button>
+        <button id="approve-btn-mock-001-facebook" onclick="approve('mock-001','facebook',this)"
+          
+          class="text-xs px-3 py-1 rounded text-white bg-blue-600 hover:bg-blue-700">
+          承認
+        </button>
+      </div>
+    </div>
+
+    <div class="border rounded-lg p-4 space-y-2">
+      <div class="flex items-center gap-2">
+        <span class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center flex-shrink-0" style="background:#E1306C">I</span>
+        <span class="font-semibold text-sm">Instagram</span>
+        <span id="status-mock-001-instagram" class="text-xs px-2 py-0.5 rounded-full status-approved">
+          ✅ 承認済み
+        </span>
+      </div>
+      <textarea id="text-mock-001-instagram" class="w-full text-sm border rounded p-2 bg-gray-50 min-h-[80px]">今日のあおぞら博多はみんなで折り紙🎨✨
+笑顔いっぱいの時間をお届けします😊
+写真3枚あるよ！
+
+#あおぞら博多 #介護施設 #デイサービス #折り紙 #レクリエーション #笑顔 #福岡介護 #介護士 #高齢者 #日常 #癒し #温かい</textarea>
+      <div class="flex gap-2">
+        <button onclick="saveEdit('mock-001','instagram',this)" class="text-xs px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-700">保存</button>
+        <button id="approve-btn-mock-001-instagram" onclick="approve('mock-001','instagram',this)"
+          disabled
+          class="text-xs px-3 py-1 rounded text-white bg-green-600 cursor-default">
+          承認済み
+        </button>
+      </div>
+    </div>
+
+    <div class="border rounded-lg p-4 space-y-2">
+      <div class="flex items-center gap-2">
+        <span class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center flex-shrink-0" style="background:#010101">T</span>
+        <span class="font-semibold text-sm">TikTok</span>
+        <span id="status-mock-001-tiktok" class="text-xs px-2 py-0.5 rounded-full status-pending">
+          ⏳ 未承認
+        </span>
+      </div>
+      <textarea id="text-mock-001-tiktok" class="w-full text-sm border rounded p-2 bg-gray-50 min-h-[80px]">折り紙で大盛り上がり🎉 #あおぞら博多 #介護 #レクリエーション</textarea>
+      <div class="flex gap-2">
+        <button onclick="saveEdit('mock-001','tiktok',this)" class="text-xs px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-700">保存</button>
+        <button id="approve-btn-mock-001-tiktok" onclick="approve('mock-001','tiktok',this)"
+          
+          class="text-xs px-3 py-1 rounded text-white bg-blue-600 hover:bg-blue-700">
+          承認
+        </button>
+      </div>
+    </div>
+
+    <div class="border rounded-lg p-4 space-y-2">
+      <div class="flex items-center gap-2">
+        <span class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center flex-shrink-0" style="background:#14171A">X</span>
+        <span class="font-semibold text-sm">X</span>
+        <span id="status-mock-001-x" class="text-xs px-2 py-0.5 rounded-full status-pending">
+          ⏳ 未承認
+        </span>
+      </div>
+      <textarea id="text-mock-001-x" class="w-full text-sm border rounded p-2 bg-gray-50 min-h-[80px]">あおぞら博多の折り紙レク、皆さんの集中した姿が素敵です✨ #あおぞら #介護</textarea>
+      <div class="flex gap-2">
+        <button onclick="saveEdit('mock-001','x',this)" class="text-xs px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-700">保存</button>
+        <button id="approve-btn-mock-001-x" onclick="approve('mock-001','x',this)"
+          
+          class="text-xs px-3 py-1 rounded text-white bg-blue-600 hover:bg-blue-700">
+          承認
+        </button>
+      </div>
+    </div>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl shadow p-5 space-y-4">
+    <div class="space-y-1">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span id="branch-label-mock-002" class="font-bold text-gray-800">七福の里</span>
+        <button onclick="editBranch('mock-002')" class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-500 hover:bg-gray-200">✏️ 修正</button>
+        <span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">顔出し記載なし・要確認</span>
+      </div>
+      <div id="branch-edit-mock-002" class="hidden gap-2 items-center mt-1">
+        <input id="branch-input-mock-002" type="text" list="branch-list"
+          value="七福の里" placeholder="例: あおぞら博多"
+          class="text-sm border rounded px-2 py-1 w-48">
+        <button onclick="saveBranch('mock-002', this)" class="text-xs px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700">保存</button>
+        <button onclick="cancelBranchEdit('mock-002')" class="text-xs px-3 py-1 rounded bg-gray-200 text-gray-600 hover:bg-gray-300">キャンセル</button>
+      </div>
+      <p class="text-xs text-gray-500">3/30 14:00 ・ 山田 太郎 ・ 写真4枚</p>
+      <p class="text-sm text-gray-700 bg-gray-50 rounded p-2 mt-1">七福の里 お花見イベントを開催しました。桜がきれいでした。</p>
+    </div>
+    <div class="flex justify-end">
+      <button id="approve-all-btn-mock-002" onclick="approveAll('mock-002', this)"
+        disabled
+        class="text-sm px-4 py-2 rounded text-white font-medium bg-green-600 cursor-default">
+        ✅ 全て承認済み
+      </button>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      
+    <div class="border rounded-lg p-4 space-y-2">
+      <div class="flex items-center gap-2">
+        <span class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center flex-shrink-0" style="background:#1877F2">F</span>
+        <span class="font-semibold text-sm">Facebook</span>
+        <span id="status-mock-002-facebook" class="text-xs px-2 py-0.5 rounded-full status-approved">
+          ✅ 承認済み
+        </span>
+      </div>
+      <textarea id="text-mock-002-facebook" class="w-full text-sm border rounded p-2 bg-gray-50 min-h-[80px]">七福の里でお花見イベントを開催しました🌸
+満開の桜の下で、利用者様と素敵なひとときを過ごしました。
+#七福の里 #介護 #お花見 #桜</textarea>
+      <div class="flex gap-2">
+        <button onclick="saveEdit('mock-002','facebook',this)" class="text-xs px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-700">保存</button>
+        <button id="approve-btn-mock-002-facebook" onclick="approve('mock-002','facebook',this)"
+          disabled
+          class="text-xs px-3 py-1 rounded text-white bg-green-600 cursor-default">
+          承認済み
+        </button>
+      </div>
+    </div>
+
+    <div class="border rounded-lg p-4 space-y-2">
+      <div class="flex items-center gap-2">
+        <span class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center flex-shrink-0" style="background:#E1306C">I</span>
+        <span class="font-semibold text-sm">Instagram</span>
+        <span id="status-mock-002-instagram" class="text-xs px-2 py-0.5 rounded-full status-approved">
+          ✅ 承認済み
+        </span>
+      </div>
+      <textarea id="text-mock-002-instagram" class="w-full text-sm border rounded p-2 bg-gray-50 min-h-[80px]">🌸お花見イベント開催しました！
+桜がとってもきれいでした😊 写真4枚！
+#七福の里 #お花見 #桜 #介護施設 #デイサービス #春 #福岡 #介護 #笑顔 #高齢者 #日常 #癒し</textarea>
+      <div class="flex gap-2">
+        <button onclick="saveEdit('mock-002','instagram',this)" class="text-xs px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-700">保存</button>
+        <button id="approve-btn-mock-002-instagram" onclick="approve('mock-002','instagram',this)"
+          disabled
+          class="text-xs px-3 py-1 rounded text-white bg-green-600 cursor-default">
+          承認済み
+        </button>
+      </div>
+    </div>
+
+    <div class="border rounded-lg p-4 space-y-2">
+      <div class="flex items-center gap-2">
+        <span class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center flex-shrink-0" style="background:#010101">T</span>
+        <span class="font-semibold text-sm">TikTok</span>
+        <span id="status-mock-002-tiktok" class="text-xs px-2 py-0.5 rounded-full status-approved">
+          ✅ 承認済み
+        </span>
+      </div>
+      <textarea id="text-mock-002-tiktok" class="w-full text-sm border rounded p-2 bg-gray-50 min-h-[80px]">桜満開のお花見🌸 #七福の里 #介護 #春</textarea>
+      <div class="flex gap-2">
+        <button onclick="saveEdit('mock-002','tiktok',this)" class="text-xs px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-700">保存</button>
+        <button id="approve-btn-mock-002-tiktok" onclick="approve('mock-002','tiktok',this)"
+          disabled
+          class="text-xs px-3 py-1 rounded text-white bg-green-600 cursor-default">
+          承認済み
+        </button>
+      </div>
+    </div>
+
+    <div class="border rounded-lg p-4 space-y-2">
+      <div class="flex items-center gap-2">
+        <span class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center flex-shrink-0" style="background:#14171A">X</span>
+        <span class="font-semibold text-sm">X</span>
+        <span id="status-mock-002-x" class="text-xs px-2 py-0.5 rounded-full status-approved">
+          ✅ 承認済み
+        </span>
+      </div>
+      <textarea id="text-mock-002-x" class="w-full text-sm border rounded p-2 bg-gray-50 min-h-[80px]">七福の里でお花見🌸 満開の桜の下、利用者様と素敵な時間を #七福の里 #介護</textarea>
+      <div class="flex gap-2">
+        <button onclick="saveEdit('mock-002','x',this)" class="text-xs px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-700">保存</button>
+        <button id="approve-btn-mock-002-x" onclick="approve('mock-002','x',this)"
+          disabled
+          class="text-xs px-3 py-1 rounded text-white bg-green-600 cursor-default">
+          承認済み
+        </button>
+      </div>
+    </div>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl shadow p-5 space-y-4">
+    <div class="space-y-1">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span id="branch-label-mock-003" class="font-bold text-gray-800">未判別</span>
+        <button onclick="editBranch('mock-003')" class="text-xs px-2 py-0.5 rounded bg-orange-100 text-orange-700 hover:bg-orange-200">✏️ 拠点名を設定</button>
+        <span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">顔出し記載なし・要確認</span>
+      </div>
+      <div id="branch-edit-mock-003" class="hidden gap-2 items-center mt-1">
+        <input id="branch-input-mock-003" type="text" list="branch-list"
+          value="未判別" placeholder="例: あおぞら博多"
+          class="text-sm border rounded px-2 py-1 w-48">
+        <button onclick="saveBranch('mock-003', this)" class="text-xs px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700">保存</button>
+        <button onclick="cancelBranchEdit('mock-003')" class="text-xs px-3 py-1 rounded bg-gray-200 text-gray-600 hover:bg-gray-300">キャンセル</button>
+      </div>
+      <p class="text-xs text-gray-500">4/2 08:00 ・ 佐藤 次郎 ・ 写真2枚</p>
+      <p class="text-sm text-gray-700 bg-gray-50 rounded p-2 mt-1">今日の体操の様子です</p>
+    </div>
+    <div class="flex justify-end">
+      <button id="approve-all-btn-mock-003" onclick="approveAll('mock-003', this)"
+        
+        class="text-sm px-4 py-2 rounded text-white font-medium bg-indigo-600 hover:bg-indigo-700">
+        ✅ 全て承認
+      </button>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      
+    <div class="border rounded-lg p-4 space-y-2">
+      <div class="flex items-center gap-2">
+        <span class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center flex-shrink-0" style="background:#1877F2">F</span>
+        <span class="font-semibold text-sm">Facebook</span>
+        <span id="status-mock-003-facebook" class="text-xs px-2 py-0.5 rounded-full status-pending">
+          ⏳ 未承認
+        </span>
+      </div>
+      <textarea id="text-mock-003-facebook" class="w-full text-sm border rounded p-2 bg-gray-50 min-h-[80px]">本日も元気に体操を行いました！利用者様と一緒に体を動かす時間は、私たちにとっても大切な時間です。
+#介護 #デイサービス #体操 #健康</textarea>
+      <div class="flex gap-2">
+        <button onclick="saveEdit('mock-003','facebook',this)" class="text-xs px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-700">保存</button>
+        <button id="approve-btn-mock-003-facebook" onclick="approve('mock-003','facebook',this)"
+          
+          class="text-xs px-3 py-1 rounded text-white bg-blue-600 hover:bg-blue-700">
+          承認
+        </button>
+      </div>
+    </div>
+
+    <div class="border rounded-lg p-4 space-y-2">
+      <div class="flex items-center gap-2">
+        <span class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center flex-shrink-0" style="background:#E1306C">I</span>
+        <span class="font-semibold text-sm">Instagram</span>
+        <span id="status-mock-003-instagram" class="text-xs px-2 py-0.5 rounded-full status-pending">
+          ⏳ 未承認
+        </span>
+      </div>
+      <textarea id="text-mock-003-instagram" class="w-full text-sm border rounded p-2 bg-gray-50 min-h-[80px]">今日も体操で元気いっぱい💪✨
+写真2枚！
+#介護施設 #デイサービス #体操 #健康 #笑顔 #介護士 #高齢者 #日常 #元気 #福岡</textarea>
+      <div class="flex gap-2">
+        <button onclick="saveEdit('mock-003','instagram',this)" class="text-xs px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-700">保存</button>
+        <button id="approve-btn-mock-003-instagram" onclick="approve('mock-003','instagram',this)"
+          
+          class="text-xs px-3 py-1 rounded text-white bg-blue-600 hover:bg-blue-700">
+          承認
+        </button>
+      </div>
+    </div>
+
+    <div class="border rounded-lg p-4 space-y-2">
+      <div class="flex items-center gap-2">
+        <span class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center flex-shrink-0" style="background:#010101">T</span>
+        <span class="font-semibold text-sm">TikTok</span>
+        <span id="status-mock-003-tiktok" class="text-xs px-2 py-0.5 rounded-full status-pending">
+          ⏳ 未承認
+        </span>
+      </div>
+      <textarea id="text-mock-003-tiktok" class="w-full text-sm border rounded p-2 bg-gray-50 min-h-[80px]">体操で元気チャージ💪 #介護 #デイサービス #体操</textarea>
+      <div class="flex gap-2">
+        <button onclick="saveEdit('mock-003','tiktok',this)" class="text-xs px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-700">保存</button>
+        <button id="approve-btn-mock-003-tiktok" onclick="approve('mock-003','tiktok',this)"
+          
+          class="text-xs px-3 py-1 rounded text-white bg-blue-600 hover:bg-blue-700">
+          承認
+        </button>
+      </div>
+    </div>
+
+    <div class="border rounded-lg p-4 space-y-2">
+      <div class="flex items-center gap-2">
+        <span class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center flex-shrink-0" style="background:#14171A">X</span>
+        <span class="font-semibold text-sm">X</span>
+        <span id="status-mock-003-x" class="text-xs px-2 py-0.5 rounded-full status-pending">
+          ⏳ 未承認
+        </span>
+      </div>
+      <textarea id="text-mock-003-x" class="w-full text-sm border rounded p-2 bg-gray-50 min-h-[80px]">今日も元気に体操！利用者様の笑顔が一番のやりがいです😊 #介護 #デイサービス</textarea>
+      <div class="flex gap-2">
+        <button onclick="saveEdit('mock-003','x',this)" class="text-xs px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-700">保存</button>
+        <button id="approve-btn-mock-003-x" onclick="approve('mock-003','x',this)"
+          
+          class="text-xs px-3 py-1 rounded text-white bg-blue-600 hover:bg-blue-700">
+          承認
+        </button>
+      </div>
+    </div>
+    </div>
+  </div>
+  </main>
+
+  <script>
+    function markApproved(materialId, platform) {
+      const badge = document.getElementById('status-' + materialId + '-' + platform);
+      if (badge) { badge.className = 'text-xs px-2 py-0.5 rounded-full status-approved'; badge.textContent = '✅ 承認済み'; }
+      const btn = document.getElementById('approve-btn-' + materialId + '-' + platform);
+      if (btn) { btn.disabled = true; btn.textContent = '承認済み'; btn.className = 'text-xs px-3 py-1 rounded text-white bg-green-600 cursor-default'; }
+    }
+    function checkAllApproved(materialId) {
+      const allDone = ['facebook','instagram','tiktok','x'].every(p => {
+        const b = document.getElementById('status-' + materialId + '-' + p);
+        return b && b.textContent.includes('承認済み');
+      });
+      if (allDone) {
+        const btn = document.getElementById('approve-all-btn-' + materialId);
+        if (btn) { btn.disabled = true; btn.textContent = '✅ 全て承認済み'; btn.className = 'text-sm px-4 py-2 rounded text-white bg-green-600 cursor-default'; }
+      }
+    }
+    async function approve(materialId, platform, btn) {
+      btn.disabled = true; btn.textContent = '処理中...';
+      await new Promise(r => setTimeout(r, 500));
+      markApproved(materialId, platform);
+      checkAllApproved(materialId);
+    }
+    async function approveAll(materialId, btn) {
+      if (!confirm('すべてのSNSを一括承認しますか？')) return;
+      btn.disabled = true; btn.textContent = '処理中...';
+      await new Promise(r => setTimeout(r, 800));
+      ['facebook','instagram','tiktok','x'].forEach(p => markApproved(materialId, p));
+      btn.textContent = '✅ 全て承認済み';
+      btn.classList.replace('bg-indigo-600','bg-green-600');
+      btn.classList.remove('hover:bg-indigo-700');
+    }
+    function editBranch(materialId) {
+      const el = document.getElementById('branch-edit-' + materialId);
+      el.classList.remove('hidden'); el.classList.add('flex');
+    }
+    function cancelBranchEdit(materialId) {
+      const el = document.getElementById('branch-edit-' + materialId);
+      el.classList.add('hidden'); el.classList.remove('flex');
+    }
+    async function saveBranch(materialId, btn) {
+      const input = document.getElementById('branch-input-' + materialId);
+      const branch = input.value.trim();
+      btn.disabled = true; btn.textContent = '保存中...';
+      await new Promise(r => setTimeout(r, 500));
+      document.getElementById('branch-label-' + materialId).textContent = branch || '（拠点不明）';
+      cancelBranchEdit(materialId);
+    }
+    async function saveEdit(materialId, platform, btn) {
+      btn.disabled = true; btn.textContent = '保存中...';
+      await new Promise(r => setTimeout(r, 500));
+      btn.textContent = '✅ 保存しました';
+      setTimeout(() => { btn.disabled = false; btn.textContent = '保存'; }, 2000);
+    }
+  </script>
+</body>
+</html>
