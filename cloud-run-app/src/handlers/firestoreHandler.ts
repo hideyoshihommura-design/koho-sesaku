@@ -28,6 +28,7 @@ export interface MaterialDocument {
   photoCount: number;
   driveImageFileIds: string[];
   generatedAt: Date;
+  videoGcsPath: string | null; // Remotion 生成動画の GCS パス（未生成は null）
   facebook: PlatformPost;
   instagram: PlatformPost;
   tiktok: PlatformPost;
@@ -37,7 +38,8 @@ export interface MaterialDocument {
 // 生成結果を Firestore に保存
 export async function saveMaterial(
   metadata: MaterialMetadata,
-  generated: SnsGenerationOutput
+  generated: SnsGenerationOutput,
+  videoGcsPath: string | null = null
 ): Promise<void> {
   const now = new Date();
 
@@ -51,6 +53,7 @@ export async function saveMaterial(
     photoCount: metadata.photoCount,
     driveImageFileIds: metadata.driveImageFileIds || [],
     generatedAt: now,
+    videoGcsPath,
     facebook:  { text: generated.facebook,  editedText: null, status: 'pending', approvedAt: null },
     instagram: { text: generated.instagram, editedText: null, status: 'pending', approvedAt: null },
     tiktok:    { text: generated.tiktok,    editedText: null, status: 'pending', approvedAt: null },

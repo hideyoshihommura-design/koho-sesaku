@@ -1,10 +1,11 @@
 // Cloud Scheduler から呼ばれる処理パイプライン
-// 18:00 と 23:00 に実行: Drive から未処理素材を取得 → Claude 生成 → Firestore 保存 → Chat 通知
+// 18:00 と 23:00 に実行: Drive から未処理素材を取得 → Claude 生成 → 動画生成 → Firestore 保存 → Chat 通知
 
 import { Request, Response } from 'express';
 import { logger } from '../utils/logger';
 import { listUnprocessedMaterials, downloadImagesAsBase64, markAsProcessed } from './driveHandler';
 import { generateSnsPost } from './snsGenerateHandler';
+import { generateSlideshowVideo } from './videoHandler';
 import { saveMaterial, countPendingMaterials } from './firestoreHandler';
 import { notifyProcessingComplete, notifyPendingReminder, notifyError } from '../utils/notify';
 import { getSecret, SECRET_NAMES } from '../utils/secretManager';
@@ -73,8 +74,22 @@ async function processAllMaterials(): Promise<void> {
       // Claude で投稿文生成
       const generated = await generateSnsPost(material, images);
 
+      // Remotion でスライドショー動画を生成（画像がある場合のみ）
+      let videoGcsPath: string | null = null;
+      if (images.length > 0) {
+        try {
+          videoGcsPath = await generateSlideshowVideo(material.materialId, images);
+        } catch (videoErr) {
+          // 動画生成に失敗しても投稿文は保存して続行
+          logger.warn('動画生成をスキップします', {
+            materialId: material.materialId,
+            error: String(videoErr),
+          });
+        }
+      }
+
       // Firestore に保存
-      await saveMaterial(material, generated);
+      await saveMaterial(material, generated, videoGcsPath);
 
       // Drive の素材を処理済みにマーク
       await markAsProcessed(material.materialId);

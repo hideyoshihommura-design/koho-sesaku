@@ -38,6 +38,7 @@ gcloud services enable \
   aiplatform.googleapis.com \
   artifactregistry.googleapis.com \
   cloudbuild.googleapis.com \
+  storage.googleapis.com \
   --project="$PROJECT_ID"
 echo "✅ 完了"
 
@@ -66,12 +67,25 @@ for ROLE in \
   roles/secretmanager.secretAccessor \
   roles/datastore.user \
   roles/aiplatform.user \
-  roles/logging.logWriter; do
+  roles/logging.logWriter \
+  roles/storage.objectAdmin; do
   gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --member="serviceAccount:${SA_EMAIL}" \
     --role="$ROLE" \
     --quiet 2>/dev/null
 done
+echo "✅ 完了"
+
+# ──────────────────────────────────────────────
+# Step 3b: GCS バケット作成（Remotion 動画保存先）
+# ──────────────────────────────────────────────
+VIDEO_BUCKET="${PROJECT_ID}-sns-videos"
+echo ""
+echo "▶ GCS バケットを作成中: gs://${VIDEO_BUCKET}"
+gcloud storage buckets create "gs://${VIDEO_BUCKET}" \
+  --location="$REGION" \
+  --project="$PROJECT_ID" \
+  --uniform-bucket-level-access 2>/dev/null || echo "  （既に存在します）"
 echo "✅ 完了"
 
 # ──────────────────────────────────────────────
@@ -94,8 +108,8 @@ gcloud run deploy sns-auto-post \
   --region="$REGION" \
   --service-account="$SA_EMAIL" \
   --set-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT_ID},VERTEX_REGION=us-east5,CLOUD_RUN_URL=https://sns-auto-post-${PROJECT_ID}.a.run.app" \
-  --cpu=1 \
-  --memory=512Mi \
+  --cpu=2 \
+  --memory=2Gi \
   --timeout=300 \
   --concurrency=80 \
   --min-instances=0 \
