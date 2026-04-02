@@ -1,7 +1,11 @@
 # ──────────────────────────────────
-# ビルドステージ（TypeScript コンパイル + Remotion バンドル）
+# ビルドステージ（BGM生成 + TypeScript コンパイル + Remotion バンドル）
 # ──────────────────────────────────
 FROM node:20-bookworm AS builder
+
+# ffmpeg（BGM自動生成用）をインストール
+RUN apt-get update && apt-get install -y ffmpeg --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY package*.json ./
@@ -9,8 +13,13 @@ RUN npm ci
 
 COPY tsconfig.json ./
 COPY src/ ./src/
+COPY scripts/generate-bgm.sh ./scripts/
 
-# TypeScript コンパイル + Remotion 合成を webpack でバンドル
+# BGM を自動生成（public/music/bgm1〜3.mp3）
+# Remotion バンドル前に実行することでバンドルに含まれる
+RUN bash scripts/generate-bgm.sh
+
+# TypeScript コンパイル + Remotion 合成を webpack でバンドル（BGM込み）
 RUN npm run build
 
 # ──────────────────────────────────
@@ -31,7 +40,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-# TypeScript コンパイル済みコード + Remotion バンドルをコピー
+# TypeScript コンパイル済みコード + Remotion バンドル（BGM含む）をコピー
 COPY --from=builder /app/dist ./dist
 
 # Cloud Run はポート 8080 を使用
