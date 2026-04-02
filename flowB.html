@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>フローB 全体図</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #1e1e2e;
+      color: #cdd6f4;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+    h1 { margin-bottom: 32px; font-size: 1.4rem; letter-spacing: 0.05em; }
+    .mermaid { background: #fff; border-radius: 12px; padding: 32px; max-width: 900px; width: 100%; }
+  </style>
+</head>
+<body>
+  <h1>フローB 全体図</h1>
+  <div class="mermaid">
+flowchart TD
+    A[Cloud Scheduler\n30分ごと] -->|POST /poll/news| B[scraperHandler\naozora-cg.com/news/ をスクレイピング]
+    B --> C[stateStore\nCloud Storage\n投稿済みURLと照合]
+    C -->|新着なし| Z[処理終了]
+    C -->|新着あり| D[scraperHandler\n記事本文・タイトル・サムネイル取得]
+    D --> E[claudeHandler\nClaude API\nSNS投稿文を生成\nFacebook / Instagram / X / TikTok]
+    E --> F[veoHandler\nVertex AI Veo\nTikTok用縦型動画を生成]
+    F --> G[firestoreStore\nCloud Firestore\n承認待ちとして保存\nstatus: pending]
+    G --> H[notify\nSlack / メール\n承認待ち作成を通知]
+
+    H -.->|フェーズ3以降| I[管理画面\n担当者が確認・承認]
+    I -->|承認| J[各SNS直接API\nフェーズ4]
+    I -->|却下| K[却下済みとして保存]
+    J --> J1[Facebook Graph API]
+    J --> J2[Instagram Graph API]
+    J --> J3[X API v2]
+    J --> J4[TikTok Content Posting API]
+
+    style G fill:#f0a500,color:#000
+  </div>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+  </script>
+</body>
+</html>

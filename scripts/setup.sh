@@ -33,13 +33,13 @@ gcloud services enable \
   cloudscheduler.googleapis.com \
   secretmanager.googleapis.com \
   firestore.googleapis.com \
-  drive.googleapis.com \
   chat.googleapis.com \
   aiplatform.googleapis.com \
   artifactregistry.googleapis.com \
   cloudbuild.googleapis.com \
   storage.googleapis.com \
   --project="$PROJECT_ID"
+# ※ drive.googleapis.com は GCS 移行により不要になりました
 echo "✅ 完了"
 
 # ──────────────────────────────────────────────

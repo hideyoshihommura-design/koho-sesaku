@@ -3,14 +3,15 @@ import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
 const client = new SecretManagerServiceClient();
 const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT!;
 
-// Phase A で使用するシークレット名（Workload Identity 化により4つに削減）
+// Phase A で使用するシークレット名
+// Drive 廃止により 4件 → 3件 に削減
 export const SECRET_NAMES = {
   // Google API 認証: Cloud Run の Workload Identity（ADC）で自動処理 → キー不要
   // Claude 認証: Vertex AI 経由のため Anthropic API キー不要
-  CHAT_WEBHOOK_URL: 'chat-webhook-url',   // 通知用 Google Chat Incoming Webhook URL
-  SCHEDULER_SECRET: 'scheduler-secret',   // Cloud Scheduler 認証トークン
-  DRIVE_FOLDER_ID: 'drive-folder-id',     // Google Drive ルートフォルダ ID
-  APP_SECRET_PATH: 'app-secret-path',     // WebアプリのURL秘密パス（例: x9k2mN8p）
+  // Drive フォルダ ID: GCS に移行したため不要
+  CHAT_WEBHOOK_URL: 'chat-webhook-url',  // 通知用 Google Chat Incoming Webhook URL
+  SCHEDULER_SECRET: 'scheduler-secret',  // Cloud Scheduler 認証トークン
+  APP_SECRET_PATH:  'app-secret-path',   // WebアプリのURL秘密パス（例: x9k2mN8p）
 } as const;
 
 // Cloud Run インスタンスのライフタイム中はキャッシュ

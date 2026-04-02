@@ -1,99 +1,174 @@
 // Firestore を使ったデータ管理
-// 生成した SNS 投稿文の保存・取得・承認処理
+// 素材の受信記録・生成結果の保存・承認処理
 
 import { Firestore, Timestamp } from '@google-cloud/firestore';
 import { logger } from '../utils/logger';
-import { MaterialMetadata } from './driveHandler';
 import { SnsGenerationOutput } from '../prompts/snsPrompt';
 
 const db = new Firestore();
 const COLLECTION = 'materials';
 
+// ─────────────────────────────────────────
+// 型定義
+// ─────────────────────────────────────────
+
+export type GenerationStatus = 'pending' | 'generated' | 'failed';
 export type PostStatus = 'pending' | 'approved';
 
 export interface PlatformPost {
-  text: string;           // 生成された投稿文
-  editedText: string | null;  // コーディネーターが編集した文（nullは未編集）
+  text: string;
+  editedText: string | null;
   status: PostStatus;
   approvedAt: Date | null;
 }
 
+// Chat 受信時に Firestore に作成する最小レコード
+export interface PendingMaterialRecord {
+  materialId: string;
+  receivedAt: string;
+  sender: string;
+  comment: string;
+  photoCount: number;
+  gcsImagePaths: string[];  // GCS に保存した画像のパス
+}
+
+// 生成完了後のフルレコード
 export interface MaterialDocument {
   materialId: string;
   receivedAt: Date;
   sender: string;
   comment: string;
+  photoCount: number;
+  gcsImagePaths: string[];          // 素材画像の GCS パス
+  generationStatus: GenerationStatus;
+  generatedAt: Date | null;
   detectedBranch: string;
   hasFacePermission: boolean;
-  photoCount: number;
-  driveImageFileIds: string[];
-  generatedAt: Date;
-  videoGcsPath: string | null; // Remotion 生成動画の GCS パス（未生成は null）
+  videoGcsPath: string | null;      // 生成動画の GCS パス
   facebook: PlatformPost;
   instagram: PlatformPost;
   tiktok: PlatformPost;
   x: PlatformPost;
 }
 
-// 生成結果を Firestore に保存
-export async function saveMaterial(
-  metadata: MaterialMetadata,
-  generated: SnsGenerationOutput,
-  videoGcsPath: string | null = null
-): Promise<void> {
-  const now = new Date();
+// ─────────────────────────────────────────
+// Chat 受信時：素材レコードを作成（生成待ち）
+// ─────────────────────────────────────────
 
-  const doc: MaterialDocument = {
-    materialId: metadata.materialId,
-    receivedAt: new Date(metadata.receivedAt),
-    sender: metadata.sender,
-    comment: metadata.comment || '',
+export async function createMaterialRecord(record: PendingMaterialRecord): Promise<void> {
+  await db.collection(COLLECTION).doc(record.materialId).set({
+    materialId: record.materialId,
+    receivedAt: Timestamp.fromDate(new Date(record.receivedAt)),
+    sender: record.sender,
+    comment: record.comment,
+    photoCount: record.photoCount,
+    gcsImagePaths: record.gcsImagePaths,
+    generationStatus: 'pending' as GenerationStatus,
+    generatedAt: null,
+    detectedBranch: '',
+    hasFacePermission: false,
+    videoGcsPath: null,
+    facebook:  { text: '', editedText: null, status: 'pending', approvedAt: null },
+    instagram: { text: '', editedText: null, status: 'pending', approvedAt: null },
+    tiktok:    { text: '', editedText: null, status: 'pending', approvedAt: null },
+    x:         { text: '', editedText: null, status: 'pending', approvedAt: null },
+  });
+
+  logger.info('素材レコードを作成しました（生成待ち）', { materialId: record.materialId });
+}
+
+// ─────────────────────────────────────────
+// Scheduler：生成待ち素材を一覧取得
+// ─────────────────────────────────────────
+
+export async function listPendingMaterials(): Promise<PendingMaterialRecord[]> {
+  const snapshot = await db.collection(COLLECTION)
+    .where('generationStatus', '==', 'pending')
+    .orderBy('receivedAt', 'asc')
+    .get();
+
+  const results = snapshot.docs.map(doc => {
+    const data = doc.data();
+    return {
+      materialId: data.materialId as string,
+      receivedAt: (data.receivedAt instanceof Timestamp
+        ? data.receivedAt.toDate()
+        : new Date(data.receivedAt)
+      ).toISOString(),
+      sender: data.sender as string,
+      comment: data.comment as string,
+      photoCount: data.photoCount as number,
+      gcsImagePaths: (data.gcsImagePaths as string[]) || [],
+    };
+  });
+
+  logger.info('生成待ち素材を取得しました', { count: results.length });
+  return results;
+}
+
+// ─────────────────────────────────────────
+// Scheduler：生成結果でレコードを更新
+// ─────────────────────────────────────────
+
+export async function updateWithGeneratedContent(
+  materialId: string,
+  generated: SnsGenerationOutput,
+  videoGcsPath: string | null
+): Promise<void> {
+  await db.collection(COLLECTION).doc(materialId).update({
+    generationStatus: 'generated' as GenerationStatus,
+    generatedAt: Timestamp.now(),
     detectedBranch: generated.detectedBranch,
     hasFacePermission: generated.hasFacePermission,
-    photoCount: metadata.photoCount,
-    driveImageFileIds: metadata.driveImageFileIds || [],
-    generatedAt: now,
     videoGcsPath,
-    facebook:  { text: generated.facebook,  editedText: null, status: 'pending', approvedAt: null },
-    instagram: { text: generated.instagram, editedText: null, status: 'pending', approvedAt: null },
-    tiktok:    { text: generated.tiktok,    editedText: null, status: 'pending', approvedAt: null },
-    x:         { text: generated.x,         editedText: null, status: 'pending', approvedAt: null },
-  };
+    'facebook.text':  generated.facebook,
+    'instagram.text': generated.instagram,
+    'tiktok.text':    generated.tiktok,
+    'x.text':         generated.x,
+  });
 
-  await db.collection(COLLECTION).doc(metadata.materialId).set(doc);
+  logger.info('生成結果を保存しました', { materialId });
+}
 
-  logger.info('Firestore に保存しました', {
-    materialId: metadata.materialId,
-    branch: generated.detectedBranch,
+// ─────────────────────────────────────────
+// Scheduler：生成失敗をマーク
+// ─────────────────────────────────────────
+
+export async function markGenerationFailed(materialId: string): Promise<void> {
+  await db.collection(COLLECTION).doc(materialId).update({
+    generationStatus: 'failed' as GenerationStatus,
   });
 }
 
-// 全件取得（新しい順）
+// ─────────────────────────────────────────
+// Web アプリ：全素材を取得（新しい順）
+// ─────────────────────────────────────────
+
 export async function getAllMaterials(): Promise<MaterialDocument[]> {
   const snapshot = await db.collection(COLLECTION)
     .orderBy('receivedAt', 'desc')
     .limit(100)
     .get();
 
-  return snapshot.docs.map(doc => {
-    const data = doc.data();
-    return convertTimestamps(data) as unknown as MaterialDocument;
-  });
+  return snapshot.docs.map(doc => convertTimestamps(doc.data()) as unknown as MaterialDocument);
 }
 
-// 3日以上未承認の件数を取得（リマインダー用）
+// ─────────────────────────────────────────
+// リマインダー：3日以上未承認の件数
+// ─────────────────────────────────────────
+
 export async function countPendingMaterials(): Promise<number> {
   const threeDaysAgo = new Date();
   threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
   const snapshot = await db.collection(COLLECTION)
+    .where('generationStatus', '==', 'generated')
     .where('receivedAt', '<', Timestamp.fromDate(threeDaysAgo))
     .get();
 
   let count = 0;
   for (const doc of snapshot.docs) {
     const data = doc.data();
-    // 全プラットフォームが pending のものをカウント
     if (
       data.facebook?.status === 'pending' &&
       data.instagram?.status === 'pending' &&
@@ -103,26 +178,23 @@ export async function countPendingMaterials(): Promise<number> {
       count++;
     }
   }
-
   return count;
 }
 
+// ─────────────────────────────────────────
+// Web アプリ：承認・編集
+// ─────────────────────────────────────────
+
 export type Platform = 'facebook' | 'instagram' | 'tiktok' | 'x';
 
-// 承認処理
-export async function approvePlatform(
-  materialId: string,
-  platform: Platform
-): Promise<void> {
+export async function approvePlatform(materialId: string, platform: Platform): Promise<void> {
   await db.collection(COLLECTION).doc(materialId).update({
     [`${platform}.status`]: 'approved',
     [`${platform}.approvedAt`]: Timestamp.now(),
   });
-
   logger.info('承認しました', { materialId, platform });
 }
 
-// 投稿文編集
 export async function editPostText(
   materialId: string,
   platform: Platform,
@@ -131,11 +203,13 @@ export async function editPostText(
   await db.collection(COLLECTION).doc(materialId).update({
     [`${platform}.editedText`]: newText,
   });
-
   logger.info('投稿文を編集しました', { materialId, platform });
 }
 
-// Firestore の Timestamp を Date に変換
+// ─────────────────────────────────────────
+// ユーティリティ
+// ─────────────────────────────────────────
+
 function convertTimestamps(data: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
