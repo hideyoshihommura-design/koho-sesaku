@@ -3,7 +3,7 @@
 
 import { Router } from 'express';
 import { Storage } from '@google-cloud/storage';
-import { getAllMaterials, approvePlatform, editPostText, updateBranch, Platform } from './firestoreHandler';
+import { getAllMaterials, approvePlatform, approveAllPlatforms, editPostText, updateBranch, Platform } from './firestoreHandler';
 import { getVideoSignedUrl } from './videoHandler';
 import { logger } from '../utils/logger';
 
@@ -12,6 +12,15 @@ const storage = new Storage();
 function getBucketName(): string {
   return `${process.env.GOOGLE_CLOUD_PROJECT}-sns-videos`;
 }
+
+// 既知の拠点名リスト（サジェスト用）
+const KNOWN_BRANCHES = [
+  'あおぞら博多',
+  '七福の里',
+  '下荒田',
+  '東千石',
+  '梅ヶ丘',
+];
 
 export function createWebAppRouter(appSecret: string): Router {
   const router = Router();
@@ -40,7 +49,6 @@ export function createWebAppRouter(appSecret: string): Router {
 
   // ─────────────────────────────────────────
   // 画像プロキシ（GCS から取得してブラウザに返す）
-  // ?p=<base64エンコードされたGCSパス>
   // ─────────────────────────────────────────
   router.get(`/${appSecret}/image`, async (req, res) => {
     const encoded = req.query.p as string;
@@ -62,7 +70,6 @@ export function createWebAppRouter(appSecret: string): Router {
 
   // ─────────────────────────────────────────
   // 動画リダイレクト（GCS 署名付き URL にリダイレクト）
-  // ?p=<base64エンコードされたGCSパス>
   // ─────────────────────────────────────────
   router.get(`/${appSecret}/video`, async (req, res) => {
     const encoded = req.query.p as string;
@@ -80,7 +87,7 @@ export function createWebAppRouter(appSecret: string): Router {
   });
 
   // ─────────────────────────────────────────
-  // 承認 API
+  // 承認 API（個別）
   // ─────────────────────────────────────────
   router.post(`/${appSecret}/api/approve`, async (req, res) => {
     const { materialId, platform } = req.body as { materialId: string; platform: string };
@@ -93,6 +100,24 @@ export function createWebAppRouter(appSecret: string): Router {
       res.json({ ok: true });
     } catch (err) {
       logger.error('承認エラー', { materialId, platform, error: String(err) });
+      res.status(500).json({ error: String(err) });
+    }
+  });
+
+  // ─────────────────────────────────────────
+  // 承認 API（全プラットフォーム一括）
+  // ─────────────────────────────────────────
+  router.post(`/${appSecret}/api/approve-all`, async (req, res) => {
+    const { materialId } = req.body as { materialId: string };
+    if (!materialId) {
+      res.status(400).json({ error: 'materialId が必要です' });
+      return;
+    }
+    try {
+      await approveAllPlatforms(materialId);
+      res.json({ ok: true });
+    } catch (err) {
+      logger.error('一括承認エラー', { materialId, error: String(err) });
       res.status(500).json({ error: String(err) });
     }
   });
@@ -157,9 +182,9 @@ interface Material {
   detectedBranch: string;
   hasFacePermission: boolean;
   photoCount: number;
-  gcsImagePaths: string[];       // GCS パス（Drive → GCS 移行）
-  videoGcsPath: string | null;   // 生成動画の GCS パス
-  generationStatus: string;      // pending / generated / failed
+  gcsImagePaths: string[];
+  videoGcsPath: string | null;
+  generationStatus: string;
   generatedAt: Date | null;
   facebook:  PlatformPost;
   instagram: PlatformPost;
@@ -174,9 +199,6 @@ const PLATFORM_LABELS: Record<string, { label: string; color: string; icon: stri
   x:         { label: 'X',         color: '#14171A', icon: 'X' },
 };
 
-// ─────────────────────────────────────────
-// GCS パスを base64 エンコード（URL に埋め込むため）
-// ─────────────────────────────────────────
 function encodeGcsPath(gcsPath: string): string {
   return Buffer.from(gcsPath).toString('base64');
 }
@@ -185,16 +207,33 @@ function encodeGcsPath(gcsPath: string): string {
 // ダッシュボード HTML
 // ─────────────────────────────────────────
 function renderDashboard(materials: Material[]): string {
-  // 生成済みのみ表示（pending / failed は除外）
   const generated = materials.filter(m => m.generationStatus === 'generated');
-  const pending   = materials.filter(m => m.generationStatus === 'pending').length;
-  const failed    = materials.filter(m => m.generationStatus === 'failed').length;
+  const pendingList = materials.filter(m => m.generationStatus === 'pending');
+  const failed = materials.filter(m => m.generationStatus === 'failed').length;
 
   const unapprovedCount = generated.filter(m =>
-    (['facebook', 'instagram', 'tiktok', 'x'] as const).some(
-      p => m[p]?.status === 'pending'
-    )
+    (['facebook', 'instagram', 'tiktok', 'x'] as const).some(p => m[p]?.status === 'pending')
   ).length;
+
+  const datalistOptions = KNOWN_BRANCHES.map(b => `<option value="${escapeHtml(b)}">`).join('');
+
+  // 生成待ちカード
+  const pendingCards = pendingList.map(m => {
+    const receivedDate = new Date(m.receivedAt).toLocaleString('ja-JP', {
+      timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+    return `
+    <div class="bg-white rounded-xl shadow p-5 border-l-4 border-yellow-400">
+      <div class="flex items-center gap-3">
+        <span class="text-yellow-500 text-xl animate-spin">⏳</span>
+        <div>
+          <p class="font-semibold text-gray-700">${escapeHtml(m.sender)} ・ 写真${m.photoCount}枚</p>
+          <p class="text-xs text-gray-400">${receivedDate} ・ AI生成中...</p>
+        </div>
+      </div>
+    </div>`;
+  }).join('\n');
 
   const cards = generated.map(m => renderCard(m)).join('\n');
 
@@ -209,33 +248,42 @@ function renderDashboard(materials: Material[]): string {
     textarea { resize: vertical; }
     .status-pending  { background:#FEF3C7; color:#92400E; }
     .status-approved { background:#D1FAE5; color:#065F46; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .animate-spin { display:inline-block; animation: spin 2s linear infinite; }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
+
+  <!-- 拠点名サジェスト用 datalist -->
+  <datalist id="branch-list">
+    ${datalistOptions}
+  </datalist>
 
   <!-- ヘッダー -->
   <header class="bg-white shadow sticky top-0 z-10">
     <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-2">
       <h1 class="text-lg font-bold text-gray-800">SNS投稿 承認ダッシュボード</h1>
-      <div class="flex gap-3 text-sm flex-wrap">
+      <div class="flex items-center gap-3 text-sm flex-wrap">
         <span class="text-gray-500">未承認: <span class="font-bold text-orange-500">${unapprovedCount}件</span></span>
-        ${pending > 0 ? `<span class="text-gray-400">生成待ち: ${pending}件</span>` : ''}
-        ${failed  > 0 ? `<span class="text-red-400">生成失敗: ${failed}件</span>` : ''}
+        ${pendingList.length > 0 ? `<span class="text-yellow-500 font-medium">⏳ 生成中: ${pendingList.length}件</span>` : ''}
+        ${failed > 0 ? `<span class="text-red-400">生成失敗: ${failed}件</span>` : ''}
+        <button onclick="location.reload()" class="text-xs px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 border">🔄 更新</button>
       </div>
     </div>
   </header>
 
   <main class="max-w-5xl mx-auto px-4 py-6 space-y-6">
-    ${generated.length === 0
-      ? '<p class="text-center text-gray-500 py-20">まだ生成されたコンテンツはありません</p>'
+    ${pendingCards}
+    ${generated.length === 0 && pendingList.length === 0
+      ? '<p class="text-center text-gray-500 py-20">まだコンテンツはありません</p>'
       : cards
     }
   </main>
 
   <script>
+    // ─── 個別承認 ───
     async function approve(materialId, platform, btn) {
-      btn.disabled = true;
-      btn.textContent = '処理中...';
+      btn.disabled = true; btn.textContent = '処理中...';
       try {
         const res = await fetch('api/approve', {
           method: 'POST',
@@ -243,25 +291,66 @@ function renderDashboard(materials: Material[]): string {
           body: JSON.stringify({ materialId, platform }),
         });
         if (res.ok) {
-          const badge = document.getElementById('status-' + materialId + '-' + platform);
-          if (badge) { badge.className = 'text-xs px-2 py-0.5 rounded-full status-approved'; badge.textContent = '✅ 承認済み'; }
-          btn.textContent = '承認済み';
-          btn.classList.replace('bg-blue-600', 'bg-green-600');
-          btn.classList.remove('hover:bg-blue-700');
-          btn.classList.add('cursor-default');
+          markApproved(materialId, platform);
+          checkAllApproved(materialId);
         } else {
           btn.disabled = false; btn.textContent = '承認'; alert('エラーが発生しました');
         }
       } catch { btn.disabled = false; btn.textContent = '承認'; alert('通信エラー'); }
     }
 
+    // ─── 全プラットフォーム一括承認 ───
+    async function approveAll(materialId, btn) {
+      if (!confirm('すべてのSNSを一括承認しますか？')) return;
+      btn.disabled = true; btn.textContent = '処理中...';
+      try {
+        const res = await fetch('api/approve-all', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ materialId }),
+        });
+        if (res.ok) {
+          ['facebook','instagram','tiktok','x'].forEach(p => markApproved(materialId, p));
+          btn.textContent = '✅ 全て承認済み';
+          btn.classList.replace('bg-indigo-600','bg-green-600');
+          btn.classList.remove('hover:bg-indigo-700');
+        } else {
+          btn.disabled = false; btn.textContent = '全て承認'; alert('エラーが発生しました');
+        }
+      } catch { btn.disabled = false; btn.textContent = '全て承認'; alert('通信エラー'); }
+    }
+
+    // 承認済みUIに切り替えるヘルパー
+    function markApproved(materialId, platform) {
+      const badge = document.getElementById('status-' + materialId + '-' + platform);
+      if (badge) { badge.className = 'text-xs px-2 py-0.5 rounded-full status-approved'; badge.textContent = '✅ 承認済み'; }
+      const btn = document.getElementById('approve-btn-' + materialId + '-' + platform);
+      if (btn) {
+        btn.disabled = true; btn.textContent = '承認済み';
+        btn.className = 'text-xs px-3 py-1 rounded text-white bg-green-600 cursor-default';
+      }
+    }
+
+    // 全プラットフォーム承認済みなら一括ボタンも更新
+    function checkAllApproved(materialId) {
+      const allDone = ['facebook','instagram','tiktok','x'].every(p => {
+        const badge = document.getElementById('status-' + materialId + '-' + p);
+        return badge && badge.textContent.includes('承認済み');
+      });
+      if (allDone) {
+        const allBtn = document.getElementById('approve-all-btn-' + materialId);
+        if (allBtn) { allBtn.disabled = true; allBtn.textContent = '✅ 全て承認済み'; allBtn.className = 'text-sm px-4 py-2 rounded text-white bg-green-600 cursor-default'; }
+      }
+    }
+
+    // ─── 拠点名編集 ───
     function editBranch(materialId) {
-      document.getElementById('branch-edit-' + materialId).classList.remove('hidden');
-      document.getElementById('branch-edit-' + materialId).classList.add('flex');
+      const el = document.getElementById('branch-edit-' + materialId);
+      el.classList.remove('hidden'); el.classList.add('flex');
     }
     function cancelBranchEdit(materialId) {
-      document.getElementById('branch-edit-' + materialId).classList.add('hidden');
-      document.getElementById('branch-edit-' + materialId).classList.remove('flex');
+      const el = document.getElementById('branch-edit-' + materialId);
+      el.classList.add('hidden'); el.classList.remove('flex');
     }
     async function saveBranch(materialId, btn) {
       const input = document.getElementById('branch-input-' + materialId);
@@ -282,6 +371,7 @@ function renderDashboard(materials: Material[]): string {
       } catch { btn.disabled = false; btn.textContent = '保存'; alert('通信エラー'); }
     }
 
+    // ─── 投稿文編集・保存 ───
     async function saveEdit(materialId, platform, btn) {
       const ta = document.getElementById('text-' + materialId + '-' + platform);
       if (!ta) return;
@@ -300,6 +390,9 @@ function renderDashboard(materials: Material[]): string {
         }
       } catch { btn.disabled = false; btn.textContent = '保存'; alert('通信エラー'); }
     }
+
+    // 生成中の素材がある場合は30秒後に自動更新
+    ${pendingList.length > 0 ? 'setTimeout(() => location.reload(), 30000);' : ''}
   </script>
 </body>
 </html>`;
@@ -315,13 +408,16 @@ function renderCard(m: Material): string {
     hour: '2-digit', minute: '2-digit',
   });
 
-  // 写真サムネイル（GCS パスを base64 エンコードして /image?p=... に渡す）
+  const allApproved = (['facebook', 'instagram', 'tiktok', 'x'] as const)
+    .every(p => m[p]?.status === 'approved');
+
+  // 写真サムネイル
   const images = (m.gcsImagePaths || []).slice(0, 4).map(gcsPath => {
     const encoded = encodeGcsPath(gcsPath);
     return `<img src="image?p=${encoded}" class="w-full h-32 object-cover rounded" loading="lazy" onerror="this.style.display='none'">`;
   }).join('');
 
-  // 動画プレビュー（videoGcsPath がある場合のみ表示）
+  // 動画プレビュー
   const videoSection = m.videoGcsPath ? (() => {
     const encoded = encodeGcsPath(m.videoGcsPath);
     return `
@@ -329,8 +425,7 @@ function renderCard(m: Material): string {
       <div class="text-xs font-semibold text-gray-500 mb-1">🎬 生成動画（Instagram / TikTok 用）</div>
       <video
         src="video?p=${encoded}"
-        controls
-        playsinline
+        controls playsinline
         class="rounded-lg w-full max-w-[200px] bg-black"
         style="aspect-ratio:9/16"
         preload="metadata"
@@ -338,7 +433,7 @@ function renderCard(m: Material): string {
     </div>`;
   })() : '';
 
-  // SNS投稿文エリア
+  // SNS投稿文エリア（個別承認付き）
   const platforms = (['facebook', 'instagram', 'tiktok', 'x'] as const).map(p => {
     const post = m[p] as PlatformPost;
     const { label, color, icon } = PLATFORM_LABELS[p];
@@ -359,7 +454,8 @@ function renderCard(m: Material): string {
       <div class="flex gap-2">
         <button onclick="saveEdit('${m.materialId}','${p}',this)"
           class="text-xs px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-700">保存</button>
-        <button onclick="approve('${m.materialId}','${p}',this)"
+        <button id="approve-btn-${m.materialId}-${p}"
+          onclick="approve('${m.materialId}','${p}',this)"
           ${isApproved ? 'disabled' : ''}
           class="text-xs px-3 py-1 rounded text-white ${isApproved ? 'bg-green-600 cursor-default' : 'bg-blue-600 hover:bg-blue-700'}">
           ${isApproved ? '承認済み' : '承認'}
@@ -379,10 +475,15 @@ function renderCard(m: Material): string {
           ? `<button onclick="editBranch('${m.materialId}')" class="text-xs px-2 py-0.5 rounded bg-orange-100 text-orange-700 hover:bg-orange-200">✏️ 拠点名を設定</button>`
           : `<button onclick="editBranch('${m.materialId}')" class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-500 hover:bg-gray-200">✏️ 修正</button>`
         }
-        ${m.hasFacePermission ? '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">顔出しOK記載あり</span>' : '<span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">顔出し記載なし・要確認</span>'}
+        ${m.hasFacePermission
+          ? '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">顔出しOK記載あり</span>'
+          : '<span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">顔出し記載なし・要確認</span>'
+        }
       </div>
-      <div id="branch-edit-${m.materialId}" class="hidden flex gap-2 items-center mt-1">
-        <input id="branch-input-${m.materialId}" type="text" value="${escapeHtml(m.detectedBranch || '')}"
+      <div id="branch-edit-${m.materialId}" class="hidden gap-2 items-center mt-1">
+        <input id="branch-input-${m.materialId}" type="text"
+          list="branch-list"
+          value="${escapeHtml(m.detectedBranch || '')}"
           placeholder="例: あおぞら博多"
           class="text-sm border rounded px-2 py-1 w-48">
         <button onclick="saveBranch('${m.materialId}', this)" class="text-xs px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700">保存</button>
@@ -399,6 +500,16 @@ function renderCard(m: Material): string {
         ${images}
       </div>` : ''}
       ${videoSection}
+    </div>
+
+    <!-- 全プラットフォーム一括承認ボタン -->
+    <div class="flex justify-end">
+      <button id="approve-all-btn-${m.materialId}"
+        onclick="approveAll('${m.materialId}', this)"
+        ${allApproved ? 'disabled' : ''}
+        class="text-sm px-4 py-2 rounded text-white font-medium ${allApproved ? 'bg-green-600 cursor-default' : 'bg-indigo-600 hover:bg-indigo-700'}">
+        ${allApproved ? '✅ 全て承認済み' : '✅ 全て承認'}
+      </button>
     </div>
 
     <!-- SNS投稿文（4プラットフォーム） -->

@@ -195,6 +195,17 @@ export async function approvePlatform(materialId: string, platform: Platform): P
   logger.info('承認しました', { materialId, platform });
 }
 
+export async function approveAllPlatforms(materialId: string): Promise<void> {
+  const now = Timestamp.now();
+  await db.collection(COLLECTION).doc(materialId).update({
+    'facebook.status':  'approved', 'facebook.approvedAt':  now,
+    'instagram.status': 'approved', 'instagram.approvedAt': now,
+    'tiktok.status':    'approved', 'tiktok.approvedAt':    now,
+    'x.status':         'approved', 'x.approvedAt':         now,
+  });
+  logger.info('全プラットフォームを一括承認しました', { materialId });
+}
+
 export async function editPostText(
   materialId: string,
   platform: Platform,
