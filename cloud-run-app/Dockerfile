@@ -1,5 +1,5 @@
 # ──────────────────────────────────
-# ビルドステージ（BGM生成 + TypeScript コンパイル + Remotion バンドル）
+# ビルドステージ（BGM生成 + TypeScript コンパイル）
 # ──────────────────────────────────
 FROM node:20-bookworm AS builder
 
@@ -16,20 +16,18 @@ COPY src/ ./src/
 COPY scripts/generate-bgm.sh ./scripts/
 
 # BGM を自動生成（public/music/bgm1〜3.mp3）
-# Remotion バンドル前に実行することでバンドルに含まれる
 RUN bash scripts/generate-bgm.sh
 
-# TypeScript コンパイル + Remotion 合成を webpack でバンドル（BGM込み）
+# TypeScript コンパイル
 RUN npm run build
 
 # ──────────────────────────────────
-# 本番ステージ（Chromium + ffmpeg で Remotion レンダリングに対応）
+# 本番ステージ（ffmpeg で動画生成・日本語フォント対応）
 # ──────────────────────────────────
 FROM node:20-bookworm AS runner
 
-# Remotion レンダリングに必要な Chromium・ffmpeg・日本語フォントをインストール
+# ffmpeg・日本語フォントをインストール
 RUN apt-get update && apt-get install -y \
-    chromium \
     ffmpeg \
     fonts-noto-cjk \
     --no-install-recommends \
@@ -40,20 +38,20 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-# TypeScript コンパイル済みコード + Remotion バンドル（BGM含む）をコピー
+# TypeScript コンパイル済みコードをコピー
 COPY --from=builder /app/dist ./dist
+
+# BGM ファイルをコピー（ffmpeg 動画生成時に使用）
+COPY --from=builder /app/public ./public
 
 # Cloud Run はポート 8080 を使用
 ENV PORT=8080
-ENV CHROME_EXECUTABLE_PATH=/usr/bin/chromium
-ENV REMOTION_CACHE_DIR=/tmp/.remotion
 
 EXPOSE 8080
 
 # 非rootユーザーで実行（セキュリティ）
 RUN useradd -m -u 1001 appuser \
-    && mkdir -p /app/node_modules/.remotion \
-    && chown -R appuser:appuser /app/node_modules/.remotion
+    && chown -R appuser:appuser /app
 USER appuser
 
 CMD ["node", "dist/index.js"]

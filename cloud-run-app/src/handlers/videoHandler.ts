@@ -1,39 +1,41 @@
-// Remotion を使ってスライドショー動画を生成し GCS にアップロードするハンドラ
-// 認証は Cloud Run の Workload Identity（ADC）で自動処理される
+// ffmpeg を使ってスライドショー動画を生成し GCS にアップロードするハンドラ
+// Remotion（Chromium依存）から ffmpeg に変更（Cloud Run 環境での安定動作のため）
 
-import { renderMedia, selectComposition } from '@remotion/renderer';
 import { Storage } from '@google-cloud/storage';
 import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { logger } from '../utils/logger';
 
+const execAsync = promisify(exec);
 const storage = new Storage();
 
-// Docker ビルド時に生成した Remotion バンドルのパス
-const BUNDLE_PATH = path.join(__dirname, '../video-bundle');
-
-// GCS バケット名（setup.sh で作成）
+// GCS バケット名
 function getBucketName(): string {
   const project = process.env.GOOGLE_CLOUD_PROJECT;
   if (!project) throw new Error('GOOGLE_CLOUD_PROJECT が設定されていません');
   return `${project}-sns-videos`;
 }
 
-// BGM ファイル一覧（public/music/ に配置）
+// BGM ファイル一覧
 const BGM_FILES = ['bgm1.mp3', 'bgm2.mp3', 'bgm3.mp3'];
-
 function pickBgm(): string {
   return BGM_FILES[Math.floor(Math.random() * BGM_FILES.length)];
 }
 
+// BGM ファイルのパス（Dockerfile で public/music/ をコピー済み）
+function getBgmPath(file: string): string {
+  return path.join(__dirname, '../../public/music', file);
+}
+
 /**
- * 写真からスライドショー動画を生成して GCS に保存する
- *
- * @param materialId   素材ID（ファイル名に使用）
- * @param images       Drive からダウンロードした画像（base64）
- * @param captionText  動画下部に表示する字幕テキスト（Instagram投稿文）
- * @returns GCS のオブジェクトパス（例: videos/XXXX.mp4）
+ * 写真からスライドショー動画を生成して GCS に保存する（ffmpeg 版）
+ * - 1080x1920（縦型 9:16）
+ * - 1枚あたり5秒表示
+ * - BGM付き（30秒、ループなし）
+ * - 黒背景にセンタリングして表示
  */
 export async function generateSlideshowVideo(
   materialId: string,
@@ -44,83 +46,84 @@ export async function generateSlideshowVideo(
     throw new Error('動画生成には1枚以上の画像が必要です');
   }
 
-  const frameDuration = 150;   // 1枚あたり 5秒（30fps × 5）
-  const transitionFrames = 15; // フェード 0.5秒
-  const musicFile = pickBgm();
+  const tmpDir = path.join(os.tmpdir(), `video-${materialId}`);
+  fs.mkdirSync(tmpDir, { recursive: true });
 
-  // base64 → data URL に変換（Remotion の Img コンポーネントに渡す）
-  const imageDataUrls = images.map(
-    (img) => `data:${img.mimeType};base64,${img.base64}`
-  );
+  try {
+    // ─── 1. 画像を一時ファイルに保存 ───
+    const imagePaths: string[] = [];
+    for (let i = 0; i < images.length; i++) {
+      const ext = images[i].mimeType.includes('png') ? 'png' : 'jpg';
+      const imgPath = path.join(tmpDir, `img${i}.${ext}`);
+      fs.writeFileSync(imgPath, Buffer.from(images[i].base64, 'base64'));
+      imagePaths.push(imgPath);
+    }
 
-  // 総フレーム数
-  const totalFrames = images.length * frameDuration + transitionFrames;
+    logger.info('動画生成を開始します（ffmpeg）', {
+      materialId,
+      imageCount: images.length,
+    });
 
-  const inputProps = {
-    imageDataUrls,
-    captionText,
-    musicFile,
-    frameDuration,
-    transitionFrames,
-  };
+    // ─── 2. concat ファイルを作成（各画像5秒表示） ───
+    const concatFile = path.join(tmpDir, 'concat.txt');
+    const concatLines = imagePaths.flatMap(p => [`file '${p}'`, `duration 5`]);
+    // concat demuxer は最後のファイルを再度指定する必要がある
+    concatLines.push(`file '${imagePaths[imagePaths.length - 1]}'`);
+    fs.writeFileSync(concatFile, concatLines.join('\n'));
 
-  logger.info('動画生成を開始します', {
-    materialId,
-    imageCount: images.length,
-    durationSec: Math.round(totalFrames / 30),
-    musicFile,
-  });
+    // ─── 3. スライドショー動画を生成（音声なし）───
+    const videoNoAudio = path.join(tmpDir, 'slideshow.mp4');
+    const slideshowCmd = [
+      'ffmpeg -y',
+      `-f concat -safe 0 -i "${concatFile}"`,
+      `-vf "scale=1080:1920:force_original_aspect_ratio=decrease,`,
+      `pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1"`,
+      `-c:v libx264 -pix_fmt yuv420p -r 30`,
+      `"${videoNoAudio}"`,
+    ].join(' ');
 
-  const browserExecutable = process.env.CHROME_EXECUTABLE_PATH || '/usr/bin/chromium';
+    await execAsync(slideshowCmd);
 
-  // Remotion の合成情報を取得（バンドルから）
-  const composition = await selectComposition({
-    serveUrl: BUNDLE_PATH,
-    id: 'Slideshow',
-    inputProps,
-    browserExecutable,
-    chromiumOptions: {
-      gl: 'swangle',
-      disableWebSecurity: true,
-      enableMultiProcessOnLinux: false,
-    },
-  });
+    // ─── 4. BGM を合成 ───
+    const outputPath = path.join(os.tmpdir(), `${materialId}.mp4`);
+    const bgmFile = pickBgm();
+    const bgmPath = getBgmPath(bgmFile);
 
-  // durationInFrames を画像枚数に合わせて上書き
-  composition.durationInFrames = totalFrames;
+    let finalCmd: string;
+    if (fs.existsSync(bgmPath)) {
+      // BGM あり: 動画の長さに合わせてカット（-shortest）
+      finalCmd = [
+        'ffmpeg -y',
+        `-i "${videoNoAudio}"`,
+        `-i "${bgmPath}"`,
+        `-shortest`,
+        `-c:v copy -c:a aac -b:a 128k`,
+        `"${outputPath}"`,
+      ].join(' ');
+    } else {
+      // BGM なし: そのままコピー
+      logger.warn('BGMファイルが見つかりません', { bgmPath });
+      finalCmd = `ffmpeg -y -i "${videoNoAudio}" -c:v copy "${outputPath}"`;
+    }
 
-  // 一時ファイルに MP4 を出力
-  const tmpPath = path.join(os.tmpdir(), `${materialId}.mp4`);
+    await execAsync(finalCmd);
 
-  await renderMedia({
-    composition,
-    serveUrl: BUNDLE_PATH,
-    codec: 'h264',
-    outputLocation: tmpPath,
-    inputProps,
-    browserExecutable,
-    chromiumOptions: {
-      gl: 'swangle',
-      disableWebSecurity: true,
-      enableMultiProcessOnLinux: false,
-    },
-  });
+    // ─── 5. GCS にアップロード ───
+    const destPath = `videos/${materialId}.mp4`;
+    await storage.bucket(getBucketName()).upload(outputPath, {
+      destination: destPath,
+      metadata: { contentType: 'video/mp4' },
+    });
 
-  // GCS にアップロード
-  const bucketName = getBucketName();
-  const destPath = `videos/${materialId}.mp4`;
+    // 一時ファイルをクリーンアップ
+    fs.unlinkSync(outputPath);
 
-  await storage.bucket(bucketName).upload(tmpPath, {
-    destination: destPath,
-    metadata: { contentType: 'video/mp4' },
-  });
+    logger.info('動画を GCS に保存しました', { materialId, destPath, bgmFile });
+    return destPath;
 
-  // 一時ファイルを削除
-  fs.unlinkSync(tmpPath);
-
-  logger.info('動画を GCS に保存しました', { materialId, bucketName, destPath });
-
-  return destPath; // 例: videos/XXXX.mp4
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
 }
 
 /** GCS の署名付き URL を生成（Web アプリでのプレビュー用） */
