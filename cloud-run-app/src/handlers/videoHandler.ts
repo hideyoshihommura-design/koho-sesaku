@@ -82,6 +82,7 @@ export async function generateSlideshowVideo(
     chromiumOptions: {
       gl: 'swangle',
       disableWebSecurity: true,
+      enableMultiProcessOnLinux: false,
     },
   });
 
@@ -101,6 +102,7 @@ export async function generateSlideshowVideo(
     chromiumOptions: {
       gl: 'swangle',
       disableWebSecurity: true,
+      enableMultiProcessOnLinux: false,
     },
   });
 

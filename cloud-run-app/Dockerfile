@@ -46,6 +46,7 @@ COPY --from=builder /app/dist ./dist
 # Cloud Run はポート 8080 を使用
 ENV PORT=8080
 ENV CHROME_EXECUTABLE_PATH=/usr/bin/chromium
+ENV REMOTION_CACHE_DIR=/tmp/.remotion
 
 EXPOSE 8080
 
