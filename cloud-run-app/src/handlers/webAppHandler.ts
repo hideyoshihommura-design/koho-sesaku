@@ -3,7 +3,7 @@
 
 import { Router } from 'express';
 import { Storage } from '@google-cloud/storage';
-import { getAllMaterials, approvePlatform, editPostText, Platform } from './firestoreHandler';
+import { getAllMaterials, approvePlatform, editPostText, updateBranch, Platform } from './firestoreHandler';
 import { getVideoSignedUrl } from './videoHandler';
 import { logger } from '../utils/logger';
 
@@ -113,6 +113,24 @@ export function createWebAppRouter(appSecret: string): Router {
       res.json({ ok: true });
     } catch (err) {
       logger.error('編集エラー', { materialId, platform, error: String(err) });
+      res.status(500).json({ error: String(err) });
+    }
+  });
+
+  // ─────────────────────────────────────────
+  // 拠点名更新 API
+  // ─────────────────────────────────────────
+  router.post(`/${appSecret}/api/branch`, async (req, res) => {
+    const { materialId, branch } = req.body as { materialId: string; branch: string };
+    if (!materialId || branch === undefined) {
+      res.status(400).json({ error: 'materialId と branch が必要です' });
+      return;
+    }
+    try {
+      await updateBranch(materialId, branch);
+      res.json({ ok: true });
+    } catch (err) {
+      logger.error('拠点名更新エラー', { materialId, error: String(err) });
       res.status(500).json({ error: String(err) });
     }
   });
@@ -237,6 +255,33 @@ function renderDashboard(materials: Material[]): string {
       } catch { btn.disabled = false; btn.textContent = '承認'; alert('通信エラー'); }
     }
 
+    function editBranch(materialId) {
+      document.getElementById('branch-edit-' + materialId).classList.remove('hidden');
+      document.getElementById('branch-edit-' + materialId).classList.add('flex');
+    }
+    function cancelBranchEdit(materialId) {
+      document.getElementById('branch-edit-' + materialId).classList.add('hidden');
+      document.getElementById('branch-edit-' + materialId).classList.remove('flex');
+    }
+    async function saveBranch(materialId, btn) {
+      const input = document.getElementById('branch-input-' + materialId);
+      const branch = input.value.trim();
+      btn.disabled = true; btn.textContent = '保存中...';
+      try {
+        const res = await fetch('api/branch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ materialId, branch }),
+        });
+        if (res.ok) {
+          document.getElementById('branch-label-' + materialId).textContent = branch || '（拠点不明）';
+          cancelBranchEdit(materialId);
+        } else {
+          btn.disabled = false; btn.textContent = '保存'; alert('エラーが発生しました');
+        }
+      } catch { btn.disabled = false; btn.textContent = '保存'; alert('通信エラー'); }
+    }
+
     async function saveEdit(materialId, platform, btn) {
       const ta = document.getElementById('text-' + materialId + '-' + platform);
       if (!ta) return;
@@ -329,8 +374,19 @@ function renderCard(m: Material): string {
     <!-- ヘッダー情報 -->
     <div class="space-y-1">
       <div class="flex items-center gap-2 flex-wrap">
-        <span class="font-bold text-gray-800">${escapeHtml(m.detectedBranch || '（拠点不明）')}</span>
+        <span id="branch-label-${m.materialId}" class="font-bold text-gray-800">${escapeHtml(m.detectedBranch || '（拠点不明）')}</span>
+        ${!m.detectedBranch || m.detectedBranch === '未判別'
+          ? `<button onclick="editBranch('${m.materialId}')" class="text-xs px-2 py-0.5 rounded bg-orange-100 text-orange-700 hover:bg-orange-200">✏️ 拠点名を設定</button>`
+          : `<button onclick="editBranch('${m.materialId}')" class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-500 hover:bg-gray-200">✏️ 修正</button>`
+        }
         ${m.hasFacePermission ? '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">顔出しOK記載あり</span>' : '<span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">顔出し記載なし・要確認</span>'}
+      </div>
+      <div id="branch-edit-${m.materialId}" class="hidden flex gap-2 items-center mt-1">
+        <input id="branch-input-${m.materialId}" type="text" value="${escapeHtml(m.detectedBranch || '')}"
+          placeholder="例: あおぞら博多"
+          class="text-sm border rounded px-2 py-1 w-48">
+        <button onclick="saveBranch('${m.materialId}', this)" class="text-xs px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700">保存</button>
+        <button onclick="cancelBranchEdit('${m.materialId}')" class="text-xs px-3 py-1 rounded bg-gray-200 text-gray-600 hover:bg-gray-300">キャンセル</button>
       </div>
       <p class="text-xs text-gray-500">${receivedDate} ・ ${escapeHtml(m.sender)} ・ 写真${m.photoCount}枚</p>
       ${m.comment ? `<p class="text-sm text-gray-700 bg-gray-50 rounded p-2 mt-1">${escapeHtml(m.comment)}</p>` : ''}

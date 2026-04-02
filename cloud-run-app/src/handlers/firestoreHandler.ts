@@ -206,6 +206,13 @@ export async function editPostText(
   logger.info('投稿文を編集しました', { materialId, platform });
 }
 
+export async function updateBranch(materialId: string, branch: string): Promise<void> {
+  await db.collection(COLLECTION).doc(materialId).update({
+    detectedBranch: branch,
+  });
+  logger.info('拠点名を更新しました', { materialId, branch });
+}
+
 // ─────────────────────────────────────────
 // ユーティリティ
 // ─────────────────────────────────────────
