@@ -40,7 +40,7 @@ export function createWebAppRouter(appSecret: string): Router {
   router.get(`/${appSecret}`, async (_req, res) => {
     try {
       const materials = await getAllMaterials();
-      res.send(renderDashboard(materials));
+      res.send(renderDashboard(materials, appSecret));
     } catch (err) {
       logger.error('ダッシュボード表示エラー', { error: String(err) });
       res.status(500).send('エラーが発生しました');
@@ -206,7 +206,7 @@ function encodeGcsPath(gcsPath: string): string {
 // ─────────────────────────────────────────
 // ダッシュボード HTML
 // ─────────────────────────────────────────
-function renderDashboard(materials: Material[]): string {
+function renderDashboard(materials: Material[], appSecret: string): string {
   const generated = materials.filter(m => m.generationStatus === 'generated');
   const pendingList = materials.filter(m => m.generationStatus === 'pending');
   const failed = materials.filter(m => m.generationStatus === 'failed').length;
@@ -235,7 +235,8 @@ function renderDashboard(materials: Material[]): string {
     </div>`;
   }).join('\n');
 
-  const cards = generated.map(m => renderCard(m)).join('\n');
+  const basePath = `/app/${appSecret}`;
+  const cards = generated.map(m => renderCard(m, basePath)).join('\n');
 
   return `<!DOCTYPE html>
 <html lang="ja">
@@ -281,11 +282,12 @@ function renderDashboard(materials: Material[]): string {
   </main>
 
   <script>
+    const BASE_PATH = '/app/${appSecret}';
     // ─── 個別承認 ───
     async function approve(materialId, platform, btn) {
       btn.disabled = true; btn.textContent = '処理中...';
       try {
-        const res = await fetch('api/approve', {
+        const res = await fetch(BASE_PATH + '/api/approve', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ materialId, platform }),
@@ -304,7 +306,7 @@ function renderDashboard(materials: Material[]): string {
       if (!confirm('すべてのSNSを一括承認しますか？')) return;
       btn.disabled = true; btn.textContent = '処理中...';
       try {
-        const res = await fetch('api/approve-all', {
+        const res = await fetch(BASE_PATH + '/api/approve-all', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ materialId }),
@@ -357,7 +359,7 @@ function renderDashboard(materials: Material[]): string {
       const branch = input.value.trim();
       btn.disabled = true; btn.textContent = '保存中...';
       try {
-        const res = await fetch('api/branch', {
+        const res = await fetch(BASE_PATH + '/api/branch', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ materialId, branch }),
@@ -377,7 +379,7 @@ function renderDashboard(materials: Material[]): string {
       if (!ta) return;
       btn.disabled = true; btn.textContent = '保存中...';
       try {
-        const res = await fetch('api/edit', {
+        const res = await fetch(BASE_PATH + '/api/edit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ materialId, platform, text: ta.value }),
@@ -401,7 +403,7 @@ function renderDashboard(materials: Material[]): string {
 // ─────────────────────────────────────────
 // 素材カード HTML
 // ─────────────────────────────────────────
-function renderCard(m: Material): string {
+function renderCard(m: Material, basePath: string): string {
   const receivedDate = new Date(m.receivedAt).toLocaleString('ja-JP', {
     timeZone: 'Asia/Tokyo',
     month: 'numeric', day: 'numeric',
@@ -414,7 +416,7 @@ function renderCard(m: Material): string {
   // 写真サムネイル
   const images = (m.gcsImagePaths || []).slice(0, 4).map(gcsPath => {
     const encoded = encodeGcsPath(gcsPath);
-    return `<img src="image?p=${encoded}" class="w-full h-32 object-cover rounded" loading="lazy" onerror="this.style.display='none'">`;
+    return `<img src="${basePath}/image?p=${encoded}" class="w-full h-32 object-cover rounded" loading="lazy" onerror="this.style.display='none'">`;
   }).join('');
 
   // 動画プレビュー
@@ -424,7 +426,7 @@ function renderCard(m: Material): string {
     <div>
       <div class="text-xs font-semibold text-gray-500 mb-1">🎬 生成動画（Instagram / TikTok 用）</div>
       <video
-        src="video?p=${encoded}"
+        src="${basePath}/video?p=${encoded}"
         controls playsinline
         class="rounded-lg w-full max-w-[200px] bg-black"
         style="aspect-ratio:9/16"

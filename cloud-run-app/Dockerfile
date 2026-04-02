@@ -50,7 +50,9 @@ ENV CHROME_EXECUTABLE_PATH=/usr/bin/chromium
 EXPOSE 8080
 
 # 非rootユーザーで実行（セキュリティ）
-RUN useradd -m -u 1001 appuser
+RUN useradd -m -u 1001 appuser \
+    && mkdir -p /app/node_modules/.remotion \
+    && chown -R appuser:appuser /app/node_modules/.remotion
 USER appuser
 
 CMD ["node", "dist/index.js"]
